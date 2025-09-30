@@ -2,24 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Progetto, Task, SpazioAI } from '@/types/database'
+import { Progetto, SpazioAI } from '@/types/database'
 import { 
   Plus, 
   Brain, 
   Monitor, 
-  Zap, 
   BarChart3, 
   MessageSquare,
   Copy,
-  ExternalLink,
-  Play
+  ExternalLink
 } from 'lucide-react'
 
 export default function Dashboard() {
   const [progetti, setProgetti] = useState<Progetto[]>([])
   const [spaziAI, setSpaziAI] = useState<SpazioAI[]>([])
   const [nuovaRichiesta, setNuovaRichiesta] = useState('')
-  const [suggerimento, setSuggerimento] = useState<any>(null)
+  const [suggerimento, setSuggerimento] = useState<{
+    tipo_task: string
+    spazio_ai_suggerito: string | null
+    computer_suggerito: string | null
+    prompt_ottimizzato: string
+    motivazione: string
+    passi_successivi: string[]
+  } | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -64,7 +69,7 @@ export default function Dashboard() {
     if (!nuovaRichiesta.trim()) return
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('Progetti')
         .insert([{
           nome_progetto: nuovaRichiesta.slice(0, 100),
@@ -144,7 +149,7 @@ export default function Dashboard() {
           {suggerimento && (
             <div className="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
               <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                💡 Suggerimento dell'Orchestratore AI
+                💡 Suggerimento dell&apos;Orchestratore AI
               </h3>
               
               <div className="space-y-3">
@@ -278,7 +283,7 @@ export default function Dashboard() {
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm">
-          Dashboard AI Intelligente - Il tuo maestro d'orchestra per l'automazione
+          Dashboard AI Intelligente - Il tuo maestro d&apos;orchestra per l&apos;automazione
         </div>
       </div>
     </div>

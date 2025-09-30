@@ -61,7 +61,7 @@ Rispondi in formato JSON con questa struttura:
   /**
    * Genera un "passaporto del contesto" per trasferire una conversazione
    */
-  async generaPassaportoContesto(conversazione: any[], obiettivo: string) {
+  async generaPassaportoContesto(conversazione: Array<{role: string, content: string}>, obiettivo: string) {
     try {
       const prompt = `
 Analizza questa conversazione e crea un "passaporto del contesto" ottimizzato per trasferire la memoria a un'altra AI.

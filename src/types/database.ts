@@ -35,7 +35,7 @@ export interface ContestoConversazione {
   id_spazio_ai?: string
   titolo_conversazione?: string
   riassunto_generato_ai?: string
-  conversazione_completa?: any
+  conversazione_completa?: Array<{role: string, content: string}>
   data_ultimo_aggiornamento: string
 }
 
@@ -62,7 +62,7 @@ export interface AutomazioneN8N {
   nome_workflow: string
   descrizione?: string
   trigger_evento?: string
-  azioni_workflow?: any
+  azioni_workflow?: Record<string, unknown>
   stato: 'Suggerito' | 'Implementato' | 'Attivo' | 'Disattivato'
   id_workflow_n8n?: string
   tempo_risparmiato_stimato_min?: number
