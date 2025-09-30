@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Progetto, SpazioAI } from '@/types/database'
+import { Progetto, SpazioAI, ContestoConversazione } from '@/types/database'
 import { 
   Plus, 
   Brain, 
@@ -10,12 +10,17 @@ import {
   BarChart3, 
   MessageSquare,
   Copy,
-  ExternalLink
+  ExternalLink,
+  ArrowRight,
+  Settings,
+  History
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Dashboard() {
   const [progetti, setProgetti] = useState<Progetto[]>([])
   const [spaziAI, setSpaziAI] = useState<SpazioAI[]>([])
+  const [contesti, setContesti] = useState<ContestoConversazione[]>([])
   const [nuovaRichiesta, setNuovaRichiesta] = useState('')
   const [suggerimento, setSuggerimento] = useState<{
     tipo_task: string
@@ -33,13 +38,15 @@ export default function Dashboard() {
 
   const caricaDati = async () => {
     try {
-      const [progettiRes, spaziRes] = await Promise.all([
+      const [progettiRes, spaziRes, contestiRes] = await Promise.all([
         supabase.from('Progetti').select('*').order('data_creazione', { ascending: false }),
-        supabase.from('Spazi_AI').select('*')
+        supabase.from('Spazi_AI').select('*'),
+        supabase.from('Contesti_Conversazione').select('*').order('data_ultimo_aggiornamento', { ascending: false }).limit(5)
       ])
 
       if (progettiRes.data) setProgetti(progettiRes.data)
       if (spaziRes.data) setSpaziAI(spaziRes.data)
+      if (contestiRes.data) setContesti(contestiRes.data)
     } catch (error) {
       console.error('Errore caricamento dati:', error)
     }
@@ -91,6 +98,17 @@ export default function Dashboard() {
   const copiaPrompt = (prompt: string) => {
     navigator.clipboard.writeText(prompt)
     alert('Prompt copiato negli appunti!')
+  }
+
+  const getStatoColor = (stato: string) => {
+    switch (stato) {
+      case 'Da Iniziare': return 'bg-gray-100 text-gray-800'
+      case 'In Corso': return 'bg-blue-100 text-blue-800'
+      case 'In Revisione': return 'bg-yellow-100 text-yellow-800'
+      case 'Completato': return 'bg-green-100 text-green-800'
+      case 'Pausa': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
   return (
@@ -195,45 +213,73 @@ export default function Dashboard() {
         </div>
 
         {/* Griglia delle sezioni */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           
           {/* Progetti Attivi */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <BarChart3 className="w-6 h-6 text-green-600" />
-              <h3 className="text-xl font-semibold text-gray-900">Progetti Attivi</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="w-6 h-6 text-green-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Progetti</h3>
+              </div>
+              <Link 
+                href="/progetti"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <Settings className="w-5 h-5" />
+              </Link>
             </div>
             
             <div className="space-y-3">
-              {progetti.slice(0, 3).map((progetto) => (
+              {progetti.slice(0, 2).map((progetto) => (
                 <div key={progetto.id} className="p-3 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900">{progetto.nome_progetto}</h4>
-                  <p className="text-sm text-gray-600">{progetto.stato}</p>
+                  <h4 className="font-medium text-gray-900 text-sm">{progetto.nome_progetto}</h4>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatoColor(progetto.stato)}`}>
+                      {progetto.stato}
+                    </span>
+                  </div>
                 </div>
               ))}
               
               {progetti.length === 0 && (
-                <p className="text-gray-500 text-center py-4">
-                  Nessun progetto ancora. Creane uno sopra!
+                <p className="text-gray-500 text-center py-4 text-sm">
+                  Nessun progetto ancora
                 </p>
               )}
+
+              <Link 
+                href="/progetti"
+                className="flex items-center justify-center gap-2 p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <span className="text-sm">Gestisci ({progetti.length})</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
 
           {/* Spazi AI */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <MessageSquare className="w-6 h-6 text-purple-600" />
-              <h3 className="text-xl font-semibold text-gray-900">Spazi AI</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-6 h-6 text-purple-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Spazi AI</h3>
+              </div>
+              <Link 
+                href="/spazi-ai"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <Settings className="w-5 h-5" />
+              </Link>
             </div>
             
             <div className="space-y-3">
-              {spaziAI.slice(0, 3).map((spazio) => (
+              {spaziAI.slice(0, 2).map((spazio) => (
                 <div key={spazio.id} className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">{spazio.nome_spazio}</h4>
-                      <p className="text-sm text-gray-600">{spazio.piattaforma}</p>
+                      <h4 className="font-medium text-gray-900 text-sm">{spazio.nome_spazio}</h4>
+                      <p className="text-xs text-gray-600">{spazio.piattaforma}</p>
                     </div>
                     {spazio.url_spazio && (
                       <a 
@@ -250,10 +296,61 @@ export default function Dashboard() {
               ))}
               
               {spaziAI.length === 0 && (
-                <p className="text-gray-500 text-center py-4">
-                  Nessuno spazio AI configurato
+                <p className="text-gray-500 text-center py-4 text-sm">
+                  Nessuno spazio configurato
                 </p>
               )}
+
+              <Link 
+                href="/spazi-ai"
+                className="flex items-center justify-center gap-2 p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <span className="text-sm">Gestisci ({spaziAI.length})</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Contesti Recenti */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <History className="w-6 h-6 text-orange-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Contesti</h3>
+              </div>
+              <Link 
+                href="/contesti"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <Settings className="w-5 h-5" />
+              </Link>
+            </div>
+            
+            <div className="space-y-3">
+              {contesti.slice(0, 2).map((contesto) => (
+                <div key={contesto.id} className="p-3 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 text-sm">
+                    {contesto.titolo_conversazione || 'Conversazione senza titolo'}
+                  </h4>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {new Date(contesto.data_ultimo_aggiornamento).toLocaleDateString('it-IT')}
+                  </p>
+                </div>
+              ))}
+              
+              {contesti.length === 0 && (
+                <p className="text-gray-500 text-center py-4 text-sm">
+                  Nessun contesto salvato
+                </p>
+              )}
+
+              <Link 
+                href="/contesti"
+                className="flex items-center justify-center gap-2 p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <span className="text-sm">Gestisci ({contesti.length})</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
 
@@ -266,16 +363,22 @@ export default function Dashboard() {
             
             <div className="space-y-3">
               <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900">Analista Senior</h4>
-                <p className="text-sm text-gray-600">3 schermi - Analisi complesse</p>
+                <h4 className="font-medium text-gray-900 text-sm">Analista Senior</h4>
+                <p className="text-xs text-gray-600">3 schermi</p>
+                <div className="mt-2">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                    Disponibile
+                  </span>
+                </div>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900">Manager Operativo</h4>
-                <p className="text-sm text-gray-600">2 schermi - Gestione progetti</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900">Creativo Digitale</h4>
-                <p className="text-sm text-gray-600">1 schermo - Design e frontend</p>
+                <h4 className="font-medium text-gray-900 text-sm">Manager Operativo</h4>
+                <p className="text-xs text-gray-600">2 schermi</p>
+                <div className="mt-2">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                    Disponibile
+                  </span>
+                </div>
               </div>
             </div>
           </div>
