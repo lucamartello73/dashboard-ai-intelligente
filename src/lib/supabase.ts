@@ -6,3 +6,9 @@ export function createClient() {
 }
 
 export const supabase = createClient()
+
+// Admin client per operazioni server-side
+export const supabaseAdmin = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
