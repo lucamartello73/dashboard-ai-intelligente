@@ -1,14 +1,32 @@
 import { createBrowserClient } from "@supabase/ssr"
+import type { Database } from "@/types/database"
 
-// Factory function to create a browser client
+let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null
+
+// Factory function to create or return existing browser client
 export function createClient() {
-  return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  if (typeof window === "undefined") {
+    // Server-side: create a new client each time
+    return createBrowserClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+  }
+
+  // Client-side: use singleton pattern
+  if (!browserClient) {
+    browserClient = createBrowserClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+  }
+
+  return browserClient
 }
 
-export const supabase = createClient()
-
-// Admin client per operazioni server-side
-export const supabaseAdmin = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
+  get: (target, prop) => {
+    const client = createClient()
+    return client[prop as keyof typeof client]
+  },
+})
