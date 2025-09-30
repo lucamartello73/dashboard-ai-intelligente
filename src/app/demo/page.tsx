@@ -13,7 +13,7 @@ import {
   Settings,
   History
 } from 'lucide-react'
-import Link from 'next/link'
+
 
 // Dati demo
 const progettiDemo = [
@@ -75,7 +75,14 @@ const contestiDemo = [
 
 export default function DashboardDemo() {
   const [nuovaRichiesta, setNuovaRichiesta] = useState('')
-  const [suggerimento, setSuggerimento] = useState<any>(null)
+  const [suggerimento, setSuggerimento] = useState<{
+    tipo_task: string
+    spazio_ai_suggerito: string
+    computer_suggerito: string
+    prompt_ottimizzato: string
+    motivazione: string
+    passi_successivi: string[]
+  } | null>(null)
   const [loading, setLoading] = useState(false)
 
   const analizzaRichiesta = async () => {
