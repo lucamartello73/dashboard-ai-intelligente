@@ -1,357 +1,228 @@
-"use client"
+import { createClient } from "@supabase/supabase-js"
 
-import { supabase } from './supabase'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Supabase URL or anon key is not defined in environment variables.")
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export interface AITool {
   id: string
-  user_id?: string
+  user_id: string
   nome: string
-  tipo: 'chat' | 'coding' | 'image' | 'video' | 'audio' | 'analysis'
-  piano: 'free' | 'plus' | 'pro' | 'enterprise'
+  tipo: "chat" | "coding" | "image" | "video" | "audio" | "analysis"
+  piano: "free" | "plus" | "pro" | "enterprise"
   attivo: boolean
-  created_at?: string
-  updated_at?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface UserPreferences {
-  id?: string
-  user_id?: string
-  aiPreferito: { [key: string]: string }
-  budget: {
-    mensile: number
-    disponibileNuoviTool: boolean
-  }
-  notifiche: {
-    suggerimenti: boolean
-    nuoveFunzionalita: boolean
-  }
-  tema: 'light' | 'dark' | 'auto'
-  created_at?: string
-  updated_at?: string
+  id: string
+  user_id: string
+  ai_preferito: { [key: string]: string }
+  budget: { mensile: number; disponibileNuoviTool: boolean }
+  notifiche: { suggerimenti: boolean; nuoveFunzionalita: boolean }
+  tema: "light" | "dark" | "auto"
+  created_at: string
+  updated_at: string
 }
 
 export class SupabaseUserProfileManager {
-  
-  // ==================== AI TOOLS ====================
-  
-  static async getAITools(): Promise<AITool[]> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in getAITools:', authError)
-        return []
-      }
-      if (!user) {
-        console.log('SupabaseUserProfileManager: Utente non autenticato in getAITools, restituisco array vuoto.')
-        return []
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in getAITools:', user.id)
-
-      const { data, error } = await supabase
-        .from('ai_tools')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nel caricamento strumenti AI:', error)
-        return []
-      }
-      console.log('SupabaseUserProfileManager: Strumenti AI caricati:', data)
-      return data || []
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in getAITools:', error)
-      return []
+  static async ensureAuthenticated(): Promise<boolean> {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      console.log("ensureAuthenticated: Sessione esistente.")
+      return true
     }
+    console.log("ensureAuthenticated: Nessuna sessione, tentativo di signInAnonymously.")
+    const { error } = await supabase.auth.signInAnonymously()
+    if (error) {
+      console.error("ensureAuthenticated: Errore nell'autenticazione anonima:", error)
+      return false
+    }
+    console.log("ensureAuthenticated: Autenticazione anonima riuscita.")
+    return true
   }
 
-  static async addAITool(tool: Omit<AITool, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<AITool | null> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in addAITool:', authError)
-        throw new Error('Errore di autenticazione')
-      }
-      if (!user) {
-        console.error('SupabaseUserProfileManager: Utente non autenticato in addAITool.')
-        throw new Error('Utente non autenticato')
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in addAITool:', user.id)
+  static async getAITools(): Promise<AITool[]> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("getAITools: Utente non autenticato.")
+      return []
+    }
+    console.log(`getAITools: Tentativo di recuperare strumenti AI per user_id: ${user.id}`)
+    const { data, error } = await supabase
+      .from("ai_tools")
+      .select("*")
+      .eq("user_id", user.id)
+    if (error) {
+      console.error("getAITools: Errore nel recupero strumenti AI:", error)
+      return []
+    }
+    console.log("getAITools: Strumenti AI recuperati con successo:", data)
+    return data || []
+  }
 
-      const { data, error } = await supabase
-        .from('ai_tools')
-        .insert([{
-          ...tool,
-          user_id: user.id
-        }])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nell\'aggiunta strumento AI:', error)
-        return null
-      }
-      console.log('SupabaseUserProfileManager: Strumento AI aggiunto:', data)
-      return data
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in addAITool:', error)
+  static async addAITool(tool: Omit<AITool, "id" | "user_id" | "created_at" | "updated_at">): Promise<AITool | null> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("addAITool: Utente non autenticato.")
       return null
     }
+    console.log(`addAITool: Tentativo di aggiungere strumento AI per user_id: ${user.id}`)
+    const { data, error } = await supabase
+      .from("ai_tools")
+      .insert([{ ...tool, user_id: user.id }])
+      .select()
+      .single()
+    if (error) {
+      console.error("addAITool: Errore nell'aggiunta strumento AI:", error)
+      return null
+    }
+    console.log("addAITool: Strumento AI aggiunto con successo:", data)
+    return data
   }
 
   static async updateAITool(toolId: string, updates: Partial<AITool>): Promise<boolean> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in updateAITool:', authError)
-        throw new Error('Errore di autenticazione')
-      }
-      if (!user) {
-        console.error('SupabaseUserProfileManager: Utente non autenticato in updateAITool.')
-        throw new Error('Utente non autenticato')
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in updateAITool:', user.id)
-
-      const { error } = await supabase
-        .from('ai_tools')
-        .update(updates)
-        .eq('id', toolId)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nell\'aggiornamento strumento AI:', error)
-        return false
-      }
-      console.log('SupabaseUserProfileManager: Strumento AI aggiornato con successo:', toolId)
-      return true
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in updateAITool:', error)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("updateAITool: Utente non autenticato.")
       return false
     }
+    console.log(`updateAITool: Tentativo di aggiornare strumento AI ${toolId} per user_id: ${user.id}`)
+    const { error } = await supabase
+      .from("ai_tools")
+      .update(updates)
+      .eq("id", toolId)
+      .eq("user_id", user.id) // Assicura che l'utente possa aggiornare solo i propri strumenti
+    if (error) {
+      console.error("updateAITool: Errore nell'aggiornamento strumento AI:", error)
+      return false
+    }
+    console.log(`updateAITool: Strumento AI ${toolId} aggiornato con successo.`) 
+    return true
   }
 
   static async removeAITool(toolId: string): Promise<boolean> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in removeAITool:', authError)
-        throw new Error('Errore di autenticazione')
-      }
-      if (!user) {
-        console.error('SupabaseUserProfileManager: Utente non autenticato in removeAITool.')
-        throw new Error('Utente non autenticato')
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in removeAITool:', user.id)
-
-      const { error } = await supabase
-        .from('ai_tools')
-        .delete()
-        .eq('id', toolId)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nella rimozione strumento AI:', error)
-        return false
-      }
-      console.log('SupabaseUserProfileManager: Strumento AI rimosso con successo:', toolId)
-      return true
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in removeAITool:', error)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("removeAITool: Utente non autenticato.")
       return false
     }
+    console.log(`removeAITool: Tentativo di rimuovere strumento AI ${toolId} per user_id: ${user.id}`)
+    const { error } = await supabase
+      .from("ai_tools")
+      .delete()
+      .eq("id", toolId)
+      .eq("user_id", user.id) // Assicura che l'utente possa rimuovere solo i propri strumenti
+    if (error) {
+      console.error("removeAITool: Errore nella rimozione strumento AI:", error)
+      return false
+    }
+    console.log(`removeAITool: Strumento AI ${toolId} rimosso con successo.`) 
+    return true
   }
 
-  // ==================== USER PREFERENCES ====================
-
   static async getUserPreferences(): Promise<UserPreferences | null> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in getUserPreferences:', authError)
-        return null
-      }
-      if (!user) {
-        console.log('SupabaseUserProfileManager: Utente non autenticato in getUserPreferences, restituisco null.')
-        return null
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in getUserPreferences:', user.id)
-
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nel caricamento preferenze:', error)
-        if (error.code === 'PGRST116') {
-          console.log('SupabaseUserProfileManager: Nessun record preferenze trovato, creo preferenze di default.')
-          return await this.createDefaultPreferences()
-        }
-        return null
-      }
-      console.log('SupabaseUserProfileManager: Preferenze utente caricate:', data)
-      return data
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in getUserPreferences:', error)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("getUserPreferences: Utente non autenticato.")
       return null
     }
+
+    console.log(`getUserPreferences: Tentativo di recuperare preferenze per user_id: ${user.id}`)
+    const { data, error } = await supabase
+      .from("user_preferences")
+      .select("*")
+      .eq("user_id", user.id)
+      .single()
+
+    if (error) {
+      if (error.code === "PGRST116") { // Nessuna riga trovata
+        console.log(`getUserPreferences: Nessuna preferenza trovata per user_id: ${user.id}. Creazione di default.`)
+        return this.createDefaultPreferences()
+      } else {
+        console.error("getUserPreferences: Errore nel recupero preferenze utente:", error)
+        return null
+      }
+    }
+    console.log("getUserPreferences: Preferenze recuperate con successo:", data)
+    return data
   }
 
   static async createDefaultPreferences(): Promise<UserPreferences | null> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in createDefaultPreferences:', authError)
-        throw new Error('Errore di autenticazione')
-      }
-      if (!user) {
-        console.error('SupabaseUserProfileManager: Utente non autenticato in createDefaultPreferences.')
-        throw new Error('Utente non autenticato')
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in createDefaultPreferences:', user.id)
-
-      const defaultPreferences: Omit<UserPreferences, 'id' | 'created_at' | 'updated_at'> = {
-        user_id: user.id,
-        aiPreferito: {
-          marketing: 'Claude',
-          sviluppo: 'GitHub Copilot',
-          analisi: 'ChatGPT-4',
-          creativo: 'Midjourney',
-          generico: 'ChatGPT-4'
-        },
-        budget: {
-          mensile: 50,
-          disponibileNuoviTool: true
-        },
-        notifiche: {
-          suggerimenti: true,
-          nuoveFunzionalita: true
-        },
-        tema: 'light'
-      }
-      console.log('SupabaseUserProfileManager: Tentativo di inserire preferenze di default per user:', user.id, defaultPreferences)
-
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .insert([defaultPreferences])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nella creazione preferenze di default:', error)
-        return null
-      }
-      console.log('SupabaseUserProfileManager: Preferenze di default create:', data)
-      return data
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in createDefaultPreferences:', error)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("createDefaultPreferences: Utente non autenticato, impossibile creare preferenze di default.")
       return null
     }
+
+    // Verifica se le preferenze esistono già per evitare errori UNIQUE constraint
+    const { data: existingPreferences, error: existingError } = await supabase
+      .from("user_preferences")
+      .select("id")
+      .eq("user_id", user.id)
+      .single()
+
+    if (existingPreferences) {
+      console.log(`createDefaultPreferences: Preferenze esistenti per user_id: ${user.id}. Non è necessario crearne di nuove.`)
+      return this.getUserPreferences() // Recupera quelle esistenti
+    }
+    if (existingError && existingError.code !== "PGRST116") {
+      console.error("createDefaultPreferences: Errore durante la verifica delle preferenze esistenti:", existingError)
+      return null
+    }
+
+    const defaultPreferences = {
+      user_id: user.id,
+      ai_preferito: { marketing: "Claude", sviluppo: "GitHub Copilot", analisi: "ChatGPT-4", creativo: "Midjourney", generico: "ChatGPT-4" },
+      budget: { mensile: 50, disponibileNuoviTool: true },
+      notifiche: { suggerimenti: true, nuoveFunzionalita: true },
+      tema: "light" as const
+    }
+
+    console.log(`createDefaultPreferences: Tentativo di inserire preferenze di default per user_id: ${user.id}`)
+    const { data, error } = await supabase
+      .from("user_preferences")
+      .insert([defaultPreferences])
+      .select()
+      .single()
+
+    if (error) {
+      console.error("createDefaultPreferences: Errore nella creazione preferenze di default:", error)
+      return null
+    }
+    console.log("createDefaultPreferences: Preferenze di default create con successo:", data)
+    return data
   }
 
   static async updateUserPreferences(updates: Partial<UserPreferences>): Promise<boolean> {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in updateUserPreferences:', authError)
-        throw new Error('Errore di autenticazione')
-      }
-      if (!user) {
-        console.error('SupabaseUserProfileManager: Utente non autenticato in updateUserPreferences.')
-        throw new Error('Utente non autenticato')
-      }
-      console.log('SupabaseUserProfileManager: Utente autenticato in updateUserPreferences:', user.id)
-
-      // Rimuovi campi che non dovrebbero essere aggiornati
-      const { id, user_id, created_at, updated_at, ...updateData } = updates
-      console.log('SupabaseUserProfileManager: Tentativo di aggiornare preferenze per user:', user.id, updateData)
-
-      const { error } = await supabase
-        .from('user_preferences')
-        .update(updateData)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nell\'aggiornamento preferenze:', error)
-        return false
-      }
-      console.log('SupabaseUserProfileManager: Preferenze utente aggiornate con successo.')
-      return true
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in updateUserPreferences:', error)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error("updateUserPreferences: Utente non autenticato.")
       return false
     }
-  }
-
-  // ==================== UTILITY FUNCTIONS ====================
-
-  static async getAvailableAIOptions(): Promise<string[]> {
-    try {
-      const userTools = await this.getAITools()
-      const userAINames = userTools.filter(tool => tool.attivo).map(tool => tool.nome)
-      
-      const defaultOptions = [
-        'ChatGPT-4', 'Claude', 'Gemini', 'GitHub Copilot', 'Midjourney', 
-        'DALL-E', 'Stable Diffusion', 'Runway', 'ElevenLabs', 'Perplexity'
-      ]
-      
-      // Combina strumenti utente + default, rimuovendo duplicati
-      const allOptions = [...new Set([...userAINames, ...defaultOptions])]
-      console.log('SupabaseUserProfileManager: Opzioni AI disponibili:', allOptions)
-      return allOptions
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore nel caricamento opzioni AI:', error)
-      return [
-        'ChatGPT-4', 'Claude', 'Gemini', 'GitHub Copilot', 'Midjourney', 
-        'DALL-E', 'Stable Diffusion', 'Runway', 'ElevenLabs', 'Perplexity'
-      ]
-    }
-  }
-
-  static async isUserAuthenticated(): Promise<boolean> {
-    try {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore auth.getUser in isUserAuthenticated:', error)
-        return false
-      }
-      console.log('SupabaseUserProfileManager: isUserAuthenticated - user:', user ? user.id : 'null')
-      return !!user
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch in isUserAuthenticated:', error)
+    console.log(`updateUserPreferences: Tentativo di aggiornare preferenze per user_id: ${user.id}`)
+    const { error } = await supabase
+      .from("user_preferences")
+      .update(updates)
+      .eq("user_id", user.id)
+    if (error) {
+      console.error("updateUserPreferences: Errore nell'aggiornamento preferenze utente:", error)
       return false
     }
-  }
-
-  // ==================== AUTHENTICATION HELPERS ====================
-
-  static async signInAnonymously(): Promise<boolean> {
-    try {
-      console.log('SupabaseUserProfileManager: Tentativo di autenticazione anonima...')
-      const { data, error } = await supabase.auth.signInAnonymously()
-      
-      if (error) {
-        console.error('SupabaseUserProfileManager: Errore nell\'autenticazione anonima:', error)
-        return false
-      }
-      console.log('SupabaseUserProfileManager: Autenticazione anonima riuscita, user:', data.user?.id)
-      return !!data.user
-    } catch (error) {
-      console.error('SupabaseUserProfileManager: Errore catch nell\'autenticazione anonima:', error)
-      return false
-    }
-  }
-
-  static async ensureAuthenticated(): Promise<boolean> {
-    console.log('SupabaseUserProfileManager: ensureAuthenticated - Inizio.')
-    const isAuth = await this.isUserAuthenticated()
-    if (!isAuth) {
-      console.log('SupabaseUserProfileManager: ensureAuthenticated - Utente non autenticato, tentativo di signInAnonymously.')
-      return await this.signInAnonymously()
-    }
-    console.log('SupabaseUserProfileManager: ensureAuthenticated - Utente già autenticato.')
+    console.log("updateUserPreferences: Preferenze utente aggiornate con successo.")
     return true
+  }
+
+  static getAvailableAIOptions(tools: AITool[]): string[] {
+    const defaultOptions = ["ChatGPT-4", "Claude", "Gemini", "GitHub Copilot", "Midjourney", "DALL-E", "Stable Diffusion", "Runway", "ElevenLabs", "Perplexity"]
+    const userTools = tools.filter(tool => tool.attivo).map(tool => tool.nome)
+    return [...new Set([...userTools, ...defaultOptions])]
   }
 }
 
