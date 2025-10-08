@@ -17,7 +17,8 @@ import {
   Star,
   DollarSign,
   Bell,
-  Palette
+  Palette,
+  Edit3
 } from "lucide-react"
 
 interface PreferenzeAIProps {
@@ -28,6 +29,8 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
   const [aiTools, setAiTools] = useState<AITool[]>([])
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [showAddTool, setShowAddTool] = useState(false)
+  const [showAddTaskType, setShowAddTaskType] = useState(false)
+  const [newTaskType, setNewTaskType] = useState('')
   const [newTool, setNewTool] = useState<Partial<AITool>>({
     nome: '',
     tipo: 'chat',
@@ -78,6 +81,34 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
     }
   }
 
+  const handleAddTaskType = () => {
+    if (newTaskType.trim() && preferences) {
+      const updatedPreferences = {
+        ...preferences,
+        aiPreferito: {
+          ...preferences.aiPreferito,
+          [newTaskType.toLowerCase()]: aiTools.length > 0 ? aiTools[0].nome : 'ChatGPT-4'
+        }
+      }
+      UserProfileManager.updatePreferences({ aiPreferito: updatedPreferences.aiPreferito })
+      setPreferences(updatedPreferences)
+      setNewTaskType('')
+      setShowAddTaskType(false)
+    }
+  }
+
+  const handleRemoveTaskType = (taskType: string) => {
+    if (preferences && taskType !== 'generico') { // Non permettere di rimuovere il tipo generico
+      const { [taskType]: removed, ...remainingPreferences } = preferences.aiPreferito
+      const updatedPreferences = {
+        ...preferences,
+        aiPreferito: remainingPreferences
+      }
+      UserProfileManager.updatePreferences({ aiPreferito: updatedPreferences.aiPreferito })
+      setPreferences(updatedPreferences)
+    }
+  }
+
   const getTypeIcon = (tipo: AITool['tipo']) => {
     switch (tipo) {
       case 'chat': return <Brain className="w-4 h-4" />
@@ -100,10 +131,34 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
     }
   }
 
-  const aiToolsOptions = [
-    'ChatGPT-4', 'Claude', 'Gemini', 'GitHub Copilot', 'Midjourney', 
-    'DALL-E', 'Stable Diffusion', 'Runway', 'ElevenLabs', 'Perplexity'
-  ]
+  // CORREZIONE 1: Usa gli strumenti AI realmente configurati + opzioni di default
+  const getAvailableAIOptions = () => {
+    const userAITools = aiTools.filter(tool => tool.attivo).map(tool => tool.nome)
+    const defaultOptions = [
+      'ChatGPT-4', 'Claude', 'Gemini', 'GitHub Copilot', 'Midjourney', 
+      'DALL-E', 'Stable Diffusion', 'Runway', 'ElevenLabs', 'Perplexity'
+    ]
+    
+    // Combina strumenti utente + default, rimuovendo duplicati
+    const allOptions = [...new Set([...userAITools, ...defaultOptions])]
+    return allOptions
+  }
+
+  const formatTaskTypeName = (taskType: string) => {
+    const typeNames: { [key: string]: string } = {
+      'generico': 'Progetti Generici',
+      'marketing': 'Marketing',
+      'sviluppo': 'Sviluppo',
+      'analisi': 'Analisi',
+      'creativo': 'Creativo',
+      'traduzione': 'Traduzione',
+      'ricerca': 'Ricerca',
+      'scrittura': 'Scrittura',
+      'presentazioni': 'Presentazioni',
+      'social': 'Social Media'
+    }
+    return typeNames[taskType] || taskType.charAt(0).toUpperCase() + taskType.slice(1)
+  }
 
   if (!preferences) return <div>Caricamento...</div>
 
@@ -152,7 +207,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                   value={newTool.nome}
                   onChange={(e) => setNewTool({ ...newTool, nome: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="es. ChatGPT-4"
+                  placeholder="es. Kimi AI"
                 />
               </div>
               <div>
@@ -251,19 +306,74 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
         </div>
       </div>
 
-      {/* Sezione Preferenze AI per Tipo di Task */}
+      {/* CORREZIONE 2: Sezione AI Preferiti per Tipo di Task con possibilità di aggiungere nuovi tipi */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold flex items-center gap-2 mb-6">
-          <Star className="w-6 h-6" />
-          AI Preferiti per Tipo di Task
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Star className="w-6 h-6" />
+            AI Preferiti per Tipo di Task
+          </h2>
+          <button
+            onClick={() => setShowAddTaskType(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Aggiungi Tipo
+          </button>
+        </div>
+
+        {/* Form Aggiungi Tipo di Task */}
+        {showAddTaskType && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+            <h3 className="font-medium mb-4">Nuovo Tipo di Task</h3>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Nome del Tipo</label>
+                <input
+                  type="text"
+                  value={newTaskType}
+                  onChange={(e) => setNewTaskType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="es. traduzione, ricerca, presentazioni..."
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <button
+                  onClick={handleAddTaskType}
+                  className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  Aggiungi
+                </button>
+                <button
+                  onClick={() => setShowAddTaskType(false)}
+                  className="flex items-center gap-1 px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Annulla
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(preferences.aiPreferito).map(([tipo, aiPreferito]) => (
             <div key={tipo} className="space-y-2">
-              <label className="block text-sm font-medium capitalize">
-                {tipo === 'generico' ? 'Progetti Generici' : tipo}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium">
+                  {formatTaskTypeName(tipo)}
+                </label>
+                {tipo !== 'generico' && (
+                  <button
+                    onClick={() => handleRemoveTaskType(tipo)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Rimuovi tipo di task"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               <select
                 value={aiPreferito}
                 onChange={(e) => handleUpdatePreferences({
@@ -271,7 +381,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                {aiToolsOptions.map((option) => (
+                {getAvailableAIOptions().map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
