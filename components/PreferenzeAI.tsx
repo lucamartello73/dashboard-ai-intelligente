@@ -33,29 +33,31 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
   const [loading, setLoading] = useState(true)
   const [showAddTool, setShowAddTool] = useState(false)
   const [showAddTaskType, setShowAddTaskType] = useState(false)
-  const [newTaskType, setNewTaskType] = useState('')
+  const [newTaskType, setNewTaskType] = useState("")
   const [newTool, setNewTool] = useState<Partial<AITool>>({
-    nome: '',
-    tipo: 'chat',
-    piano: 'free',
+    nome: "",
+    tipo: "chat",
+    piano: "free",
     attivo: true
   })
 
   useEffect(() => {
-    loadData()
+    const init = async () => {
+      setLoading(true)
+      // Assicurati che l'utente sia autenticato prima di caricare i dati
+      const authenticated = await SupabaseUserProfileManager.ensureAuthenticated()
+      if (!authenticated) {
+        console.error("Autenticazione fallita o utente non disponibile.")
+        setLoading(false)
+        return
+      }
+      await loadData()
+    }
+    init()
   }, [])
 
   const loadData = async () => {
     try {
-      setLoading(true)
-      
-      // Assicurati che l'utente sia autenticato
-      const isAuthenticated = await SupabaseUserProfileManager.ensureAuthenticated()
-      if (!isAuthenticated) {
-        console.error('Impossibile autenticare l\'utente')
-        return
-      }
-
       // Carica strumenti AI e preferenze in parallelo
       const [tools, prefs, aiOptions] = await Promise.all([
         SupabaseUserProfileManager.getAITools(),
@@ -67,7 +69,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
       setPreferences(prefs)
       setAvailableAIOptions(aiOptions)
     } catch (error) {
-      console.error('Errore nel caricamento dati:', error)
+      console.error("Errore nel caricamento dati:", error)
     } finally {
       setLoading(false)
     }
@@ -76,14 +78,14 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
   const handleAddTool = async () => {
     if (newTool.nome && newTool.tipo) {
       try {
-        const addedTool = await SupabaseUserProfileManager.addAITool(newTool as Omit<AITool, 'id'>)
+        const addedTool = await SupabaseUserProfileManager.addAITool(newTool as Omit<AITool, "id">)
         if (addedTool) {
-          setNewTool({ nome: '', tipo: 'chat', piano: 'free', attivo: true })
+          setNewTool({ nome: "", tipo: "chat", piano: "free", attivo: true })
           setShowAddTool(false)
           await loadData() // Ricarica tutti i dati per aggiornare le opzioni AI
         }
       } catch (error) {
-        console.error('Errore nell\'aggiunta strumento:', error)
+        console.error("Errore nell'aggiunta strumento:", error)
       }
     }
   }
@@ -95,7 +97,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
         await loadData() // Ricarica i dati
       }
     } catch (error) {
-      console.error('Errore nell\'aggiornamento strumento:', error)
+      console.error("Errore nell'aggiornamento strumento:", error)
     }
   }
 
@@ -106,7 +108,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
         await loadData() // Ricarica i dati
       }
     } catch (error) {
-      console.error('Errore nella rimozione strumento:', error)
+      console.error("Errore nella rimozione strumento:", error)
     }
   }
 
@@ -119,7 +121,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
           setPreferences(newPreferences)
         }
       } catch (error) {
-        console.error('Errore nell\'aggiornamento preferenze:', error)
+        console.error("Errore nell'aggiornamento preferenze:", error)
       }
     }
   }
@@ -128,56 +130,56 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
     if (newTaskType.trim() && preferences) {
       const updatedAiPreferito = {
         ...preferences.aiPreferito,
-        [newTaskType.toLowerCase()]: availableAIOptions.length > 0 ? availableAIOptions[0] : 'ChatGPT-4'
+        [newTaskType.toLowerCase()]: availableAIOptions.length > 0 ? availableAIOptions[0] : "ChatGPT-4"
       }
       
       await handleUpdatePreferences({ aiPreferito: updatedAiPreferito })
-      setNewTaskType('')
+      setNewTaskType("")
       setShowAddTaskType(false)
     }
   }
 
   const handleRemoveTaskType = async (taskType: string) => {
-    if (preferences && taskType !== 'generico') { // Non permettere di rimuovere il tipo generico
+    if (preferences && taskType !== "generico") { // Non permettere di rimuovere il tipo generico
       const { [taskType]: removed, ...remainingPreferences } = preferences.aiPreferito
       await handleUpdatePreferences({ aiPreferito: remainingPreferences })
     }
   }
 
-  const getTypeIcon = (tipo: AITool['tipo']) => {
+  const getTypeIcon = (tipo: AITool["tipo"]) => {
     switch (tipo) {
-      case 'chat': return <Brain className="w-4 h-4" />
-      case 'coding': return <Code className="w-4 h-4" />
-      case 'image': return <Image className="w-4 h-4" />
-      case 'video': return <Video className="w-4 h-4" />
-      case 'audio': return <Music className="w-4 h-4" />
-      case 'analysis': return <BarChart3 className="w-4 h-4" />
+      case "chat": return <Brain className="w-4 h-4" />
+      case "coding": return <Code className="w-4 h-4" />
+      case "image": return <Image className="w-4 h-4" />
+      case "video": return <Video className="w-4 h-4" />
+      case "audio": return <Music className="w-4 h-4" />
+      case "analysis": return <BarChart3 className="w-4 h-4" />
       default: return <Brain className="w-4 h-4" />
     }
   }
 
-  const getPlanColor = (piano: AITool['piano']) => {
+  const getPlanColor = (piano: AITool["piano"]) => {
     switch (piano) {
-      case 'free': return 'bg-gray-100 text-gray-800'
-      case 'plus': return 'bg-blue-100 text-blue-800'
-      case 'pro': return 'bg-purple-100 text-purple-800'
-      case 'enterprise': return 'bg-gold-100 text-gold-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case "free": return "bg-gray-100 text-gray-800"
+      case "plus": return "bg-blue-100 text-blue-800"
+      case "pro": return "bg-purple-100 text-purple-800"
+      case "enterprise": return "bg-gold-100 text-gold-800"
+      default: return "bg-gray-100 text-gray-800"
     }
   }
 
   const formatTaskTypeName = (taskType: string) => {
     const typeNames: { [key: string]: string } = {
-      'generico': 'Progetti Generici',
-      'marketing': 'Marketing',
-      'sviluppo': 'Sviluppo',
-      'analisi': 'Analisi',
-      'creativo': 'Creativo',
-      'traduzione': 'Traduzione',
-      'ricerca': 'Ricerca',
-      'scrittura': 'Scrittura',
-      'presentazioni': 'Presentazioni',
-      'social': 'Social Media'
+      "generico": "Progetti Generici",
+      "marketing": "Marketing",
+      "sviluppo": "Sviluppo",
+      "analisi": "Analisi",
+      "creativo": "Creativo",
+      "traduzione": "Traduzione",
+      "ricerca": "Ricerca",
+      "scrittura": "Scrittura",
+      "presentazioni": "Presentazioni",
+      "social": "Social Media"
     }
     return typeNames[taskType] || taskType.charAt(0).toUpperCase() + taskType.slice(1)
   }
@@ -261,7 +263,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                 <label className="block text-sm font-medium mb-1">Tipo</label>
                 <select
                   value={newTool.tipo}
-                  onChange={(e) => setNewTool({ ...newTool, tipo: e.target.value as AITool['tipo'] })}
+                  onChange={(e) => setNewTool({ ...newTool, tipo: e.target.value as AITool["tipo"] })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="chat">Chat/Conversazione</option>
@@ -276,7 +278,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                 <label className="block text-sm font-medium mb-1">Piano</label>
                 <select
                   value={newTool.piano}
-                  onChange={(e) => setNewTool({ ...newTool, piano: e.target.value as AITool['piano'] })}
+                  onChange={(e) => setNewTool({ ...newTool, piano: e.target.value as AITool["piano"] })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="free">Gratuito</option>
@@ -324,8 +326,8 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                       <span className={`px-2 py-1 rounded-full text-xs ${getPlanColor(tool.piano)}`}>
                         {tool.piano.toUpperCase()}
                       </span>
-                      <span className={`w-2 h-2 rounded-full ${tool.attivo ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                      <span>{tool.attivo ? 'Attivo' : 'Inattivo'}</span>
+                      <span className={`w-2 h-2 rounded-full ${tool.attivo ? "bg-green-500" : "bg-gray-400"}`}></span>
+                      <span>{tool.attivo ? "Attivo" : "Inattivo"}</span>
                     </div>
                   </div>
                 </div>
@@ -334,11 +336,11 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                     onClick={() => handleUpdateTool(tool.id, { attivo: !tool.attivo })}
                     className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                       tool.attivo 
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        ? "bg-red-100 text-red-700 hover:bg-red-200" 
+                        : "bg-green-100 text-green-700 hover:bg-green-200"
                     }`}
                   >
-                    {tool.attivo ? 'Disattiva' : 'Attiva'}
+                    {tool.attivo ? "Disattiva" : "Attiva"}
                   </button>
                   <button
                     onClick={() => handleRemoveTool(tool.id)}
@@ -411,7 +413,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                 <label className="block text-sm font-medium">
                   {formatTaskTypeName(tipo)}
                 </label>
-                {tipo !== 'generico' && (
+                {tipo !== "generico" && (
                   <button
                     onClick={() => handleRemoveTaskType(tipo)}
                     className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
@@ -523,7 +525,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
               <select
                 value={preferences.tema}
                 onChange={(e) => handleUpdatePreferences({
-                  tema: e.target.value as 'light' | 'dark' | 'auto'
+                  tema: e.target.value as "light" | "dark" | "auto"
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
