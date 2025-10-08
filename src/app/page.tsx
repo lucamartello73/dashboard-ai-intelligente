@@ -31,6 +31,20 @@ export default function Dashboard() {
     passi_successivi: string[]
   } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [cronologiaRichieste, setCronologiaRichieste] = useState<Array<{
+    id: string
+    richiesta: string
+    suggerimento: {
+      tipo_task: string
+      spazio_ai_suggerito: string | null
+      computer_suggerito: string | null
+      prompt_ottimizzato: string
+      motivazione: string
+      passi_successivi: string[]
+    }
+    timestamp: Date
+  }>>([])
+  const [richiestaAttiva, setRichiestaAttiva] = useState<string | null>(null)
 
   useEffect(() => {
     caricaDati()
@@ -76,6 +90,16 @@ export default function Dashboard() {
 
       const result = await response.json()
       setSuggerimento(result)
+      
+      // Salva nella cronologia
+      const nuovaVoce = {
+        id: Date.now().toString(),
+        richiesta: nuovaRichiesta,
+        suggerimento: result,
+        timestamp: new Date()
+      }
+      setCronologiaRichieste(prev => [nuovaVoce, ...prev])
+      setRichiestaAttiva(nuovaVoce.id)
     } catch (error) {
       console.error("Errore analisi:", error)
       alert("Errore durante l'analisi della richiesta")
@@ -107,6 +131,18 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Errore creazione progetto:", error)
     }
+  }
+
+  const resetRichiesta = () => {
+    setNuovaRichiesta("")
+    setSuggerimento(null)
+    setRichiestaAttiva(null)
+  }
+
+  const caricaRichiestaStorica = (voce: typeof cronologiaRichieste[0]) => {
+    setNuovaRichiesta(voce.richiesta)
+    setSuggerimento(voce.suggerimento)
+    setRichiestaAttiva(voce.id)
   }
 
   const copiaPrompt = (prompt: string) => {
@@ -155,7 +191,7 @@ export default function Dashboard() {
               className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <button
                 onClick={analizzaRichiesta}
                 disabled={loading || !nuovaRichiesta.trim()}
@@ -172,6 +208,14 @@ export default function Dashboard() {
               >
                 <Plus className="w-5 h-5" />
                 Crea Progetto Diretto
+              </button>
+
+              <button
+                onClick={resetRichiesta}
+                className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                <Plus className="w-5 h-5 rotate-45" />
+                Nuova Richiesta
               </button>
             </div>
           </div>
@@ -218,6 +262,61 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Cronologia Richieste */}
+        {cronologiaRichieste.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <History className="w-8 h-8 text-purple-600" />
+              <h2 className="text-2xl font-semibold text-gray-900">Richieste Precedenti</h2>
+            </div>
+
+            <div className="space-y-4">
+              {cronologiaRichieste.map((voce) => (
+                <div 
+                  key={voce.id} 
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    richiestaAttiva === voce.id 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <p className="text-gray-900 font-medium mb-1">
+                        {voce.richiesta.length > 100 
+                          ? `${voce.richiesta.substring(0, 100)}...` 
+                          : voce.richiesta
+                        }
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {voce.timestamp.toLocaleString('it-IT')} • Tipo: {voce.suggerimento.tipo_task}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => caricaRichiestaStorica(voce)}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                      Ricarica
+                    </button>
+                  </div>
+                  
+                  {richiestaAttiva === voce.id && (
+                    <div className="mt-3 p-3 bg-white rounded border">
+                      <p className="text-sm text-gray-600 mb-2">
+                        <strong>AI suggerita:</strong> {voce.suggerimento.spazio_ai_suggerito}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Computer:</strong> {voce.suggerimento.computer_suggerito}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Griglia delle sezioni */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
