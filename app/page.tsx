@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-// import { supabase } from "@/lib/supabase" // Disabilitato temporaneamente
+import { supabase } from "@/lib/supabase" // Riabilitato - ora funziona correttamente
 import type { Progetto, SpazioAI, ContestoConversazione } from "@/types/database"
 import { UserProfileManager } from "@/lib/userProfile"
 import { AppTrackingManager } from "@/lib/appTracking"
