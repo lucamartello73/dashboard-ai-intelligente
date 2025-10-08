@@ -30,7 +30,7 @@ function analizzaRichiestaPersonalizzata(richiesta: string, userProfile?: any) {
   // Determina il tipo di task
   let tipo_task = 'generico'
   let spazio_ai_suggerito = getPreferredAI(userProfile, 'generico') || 'ChatGPT-4 - Versatile per progetti generali'
-  let computer_suggerito = 'Manager Operativo'
+  let computer_suggerito = getComputerRecommendation(tipo_task, richiesta)
   let motivazione = getUserSpecificMotivation(userProfile, 'generico') || 'Approccio generale per progetti versatili'
   let passi_successivi = [
     'Definire obiettivi specifici',
@@ -42,6 +42,7 @@ function analizzaRichiestaPersonalizzata(richiesta: string, userProfile?: any) {
   if (lower.includes('marketing') || lower.includes('campagna') || lower.includes('pubblicità')) {
     tipo_task = 'marketing'
     spazio_ai_suggerito = getPreferredAI(userProfile, 'marketing') || 'Claude (Anthropic) - Ottimo per strategie marketing'
+    computer_suggerito = getComputerRecommendation('marketing', richiesta)
     motivazione = getUserSpecificMotivation(userProfile, 'marketing') || 'Un progetto di marketing richiede creatività e strategia. Claude eccelle nella creazione di contenuti persuasivi e piani marketing strutturati.'
     passi_successivi = [
       'Analizzare target audience e mercato',
@@ -53,8 +54,8 @@ function analizzaRichiestaPersonalizzata(richiesta: string, userProfile?: any) {
   } else if (lower.includes('analisi') || lower.includes('dati') || lower.includes('report')) {
     tipo_task = 'analisi'
     spazio_ai_suggerito = getPreferredAI(userProfile, 'analisi') || 'ChatGPT-4 - Eccellente per analisi dati'
-    computer_suggerito = 'Analista Senior'
-    motivazione = getUserSpecificMotivation(userProfile, 'analisi') || 'L\'analisi dati richiede precisione e capacità di elaborazione. L\'Analista Senior ha gli strumenti per gestire dataset complessi.'
+    computer_suggerito = getComputerRecommendation('analisi', richiesta)
+    motivazione = getUserSpecificMotivation(userProfile, 'analisi') || 'L\'analisi dati richiede precisione e capacità di elaborazione. Il computer con più schermi ti permetterà di visualizzare dataset, grafici e documentazione simultaneamente.'
     passi_successivi = [
       'Definire domande di ricerca specifiche',
       'Identificare e raccogliere fonti dati',
@@ -65,7 +66,8 @@ function analizzaRichiestaPersonalizzata(richiesta: string, userProfile?: any) {
   } else if (lower.includes('sviluppo') || lower.includes('app') || lower.includes('sito') || lower.includes('codice')) {
     tipo_task = 'sviluppo'
     spazio_ai_suggerito = getPreferredAI(userProfile, 'sviluppo') || 'GitHub Copilot - Specializzato in programmazione'
-    motivazione = getUserSpecificMotivation(userProfile, 'sviluppo') || 'I progetti di sviluppo beneficiano di assistenza specializzata nel coding. GitHub Copilot accelera la scrittura di codice di qualità.'
+    computer_suggerito = getComputerRecommendation('sviluppo', richiesta)
+    motivazione = getUserSpecificMotivation(userProfile, 'sviluppo') || 'I progetti di sviluppo beneficiano di assistenza specializzata nel coding. Il setup multi-monitor è ideale per IDE, browser di test, documentazione e terminal.'
     passi_successivi = [
       'Definire requisiti tecnici e funzionali',
       'Scegliere stack tecnologico appropriato',
@@ -76,7 +78,8 @@ function analizzaRichiestaPersonalizzata(richiesta: string, userProfile?: any) {
   } else if (lower.includes('contenuto') || lower.includes('articolo') || lower.includes('blog') || lower.includes('scrittura')) {
     tipo_task = 'creativo'
     spazio_ai_suggerito = getPreferredAI(userProfile, 'creativo') || 'Claude (Anthropic) - Eccellente per contenuti creativi'
-    motivazione = getUserSpecificMotivation(userProfile, 'creativo') || 'La creazione di contenuti richiede creatività e padronanza linguistica. Claude produce testi di alta qualità e coinvolgenti.'
+    computer_suggerito = getComputerRecommendation('creativo', richiesta)
+    motivazione = getUserSpecificMotivation(userProfile, 'creativo') || 'La creazione di contenuti richiede creatività e padronanza linguistica. Un ambiente con meno distrazioni può favorire la concentrazione nella scrittura.'
     passi_successivi = [
       'Definire tone of voice e stile',
       'Ricercare argomenti e fonti',
@@ -291,4 +294,46 @@ function addLearningInsights(userProfile: any, tipoTask: string): string {
   }
   
   return insights
+}
+
+function getComputerRecommendation(taskType: string, taskDescription: string): string {
+  // Simulazione della logica di raccomandazione computer
+  // In un'implementazione reale, questo dovrebbe interfacciarsi con ComputerManager
+  
+  const taskLower = taskDescription.toLowerCase()
+  
+  // Computer 1: Workstation Principale (4 schermi, più potente)
+  // Computer 2: Computer Secondario (3 schermi, standard)  
+  // Computer 3: Computer Portatile (1 schermo, base)
+  
+  if (taskType === 'sviluppo' || taskLower.includes('codice') || taskLower.includes('programmazione')) {
+    return 'Workstation Principale (4 schermi) - Ideale per sviluppo con IDE, browser, documentazione e terminal su schermi separati'
+  }
+  
+  if (taskType === 'analisi' || taskLower.includes('dati') || taskLower.includes('grafici')) {
+    return 'Workstation Principale (4 schermi) - Perfetto per visualizzare dataset, grafici, dashboard e documentazione simultaneamente'
+  }
+  
+  if (taskType === 'design' || taskLower.includes('grafica') || taskLower.includes('creatività')) {
+    return 'Computer Secondario (3 schermi) - Ottimo per design con software principale, riferimenti e palette colori'
+  }
+  
+  if (taskType === 'marketing' || taskLower.includes('campagna') || taskLower.includes('social')) {
+    return 'Computer Secondario (3 schermi) - Ideale per gestire contenuti, social media e analytics'
+  }
+  
+  if (taskType === 'creativo' || taskLower.includes('scrittura') || taskLower.includes('articolo')) {
+    return 'Computer Portatile (1 schermo) - Perfetto per concentrarsi sulla scrittura senza distrazioni'
+  }
+  
+  if (taskLower.includes('presentazione') || taskLower.includes('meeting')) {
+    return 'Computer Portatile (1 schermo) - Ideale per mobilità e presentazioni'
+  }
+  
+  if (taskLower.includes('ricerca') || taskLower.includes('studio')) {
+    return 'Computer Secondario (3 schermi) - Ottimo per ricerca con browser, note e documenti aperti'
+  }
+  
+  // Default per task generici
+  return 'Computer Secondario (3 schermi) - Configurazione bilanciata per la maggior parte dei task'
 }

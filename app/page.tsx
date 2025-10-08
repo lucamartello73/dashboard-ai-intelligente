@@ -12,6 +12,7 @@ import ValutazioneProgetto from "@/components/ValutazioneProgetto"
 import SupervisioneAgenti from "@/components/SupervisioneAgenti"
 import AnalyticsAvanzate from "@/components/AnalyticsAvanzate"
 import CentroNotifiche from "@/components/CentroNotifiche"
+import ChatAI from "@/components/ChatAI"
 import {
   Plus,
   Brain,
@@ -66,6 +67,7 @@ export default function Dashboard() {
   const [showAgenti, setShowAgenti] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [showNotifiche, setShowNotifiche] = useState(false)
+  const [showChatAI, setShowChatAI] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
   const [progettoPerValutazione, setProgettoPerValutazione] = useState<any>(null)
 
@@ -305,6 +307,14 @@ export default function Dashboard() {
                 title="Cronologia Personalizzata"
               >
                 <History className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowChatAI(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                title="Chat AI Assistant"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Chat AI</span>
               </button>
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg">
                 <User className="w-4 h-4" />
@@ -685,6 +695,14 @@ export default function Dashboard() {
         <CentroNotifiche
           isOpen={showNotifiche}
           onClose={() => setShowNotifiche(false)}
+        />
+      )}
+
+      {/* Chat AI Assistant */}
+      {showChatAI && (
+        <ChatAI
+          isOpen={showChatAI}
+          onClose={() => setShowChatAI(false)}
         />
       )}
     </div>
