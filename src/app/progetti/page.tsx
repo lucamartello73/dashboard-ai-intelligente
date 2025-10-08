@@ -40,11 +40,11 @@ export default function Progetti() {
   const caricaDati = async () => {
     try {
       const [progettiRes, tasksRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from('Progetti')
           .select('*')
           .order('data_creazione', { ascending: false }),
-        supabase
+        (supabase as any)
           .from('Task')
           .select('*')
           .order('data_creazione', { ascending: false })
@@ -65,14 +65,14 @@ export default function Progetti() {
   const salvaProgetto = async () => {
     try {
       if (editingProgetto) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('Progetti')
           .update(formData)
           .eq('id', editingProgetto.id)
         
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('Progetti')
           .insert([formData])
         
@@ -91,7 +91,7 @@ export default function Progetti() {
     if (!confirm('Sei sicuro di voler eliminare questo progetto? Verranno eliminati anche tutti i task associati.')) return
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('Progetti')
         .delete()
         .eq('id', id)
@@ -121,7 +121,7 @@ export default function Progetti() {
         updateData.data_completamento = new Date().toISOString()
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('Progetti')
         .update(updateData)
         .eq('id', id)

@@ -32,7 +32,7 @@ export default function SpaziAI() {
 
   const caricaSpazi = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('Spazi_AI')
         .select('*')
         .order('data_creazione', { ascending: false })
@@ -62,14 +62,14 @@ export default function SpaziAI() {
       }
 
       if (editingSpazio) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('Spazi_AI')
           .update(spazioData)
           .eq('id', editingSpazio.id)
         
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('Spazi_AI')
           .insert([spazioData])
         
@@ -88,7 +88,7 @@ export default function SpaziAI() {
     if (!confirm('Sei sicuro di voler eliminare questo spazio AI?')) return
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('Spazi_AI')
         .delete()
         .eq('id', id)

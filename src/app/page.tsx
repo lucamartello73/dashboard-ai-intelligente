@@ -39,9 +39,9 @@ export default function Dashboard() {
   const caricaDati = async () => {
     try {
       const [progettiRes, spaziRes, contestiRes] = await Promise.all([
-        supabase.from("Progetti").select("*").order("data_creazione", { ascending: false }),
-        supabase.from("Spazi_AI").select("*"),
-        supabase
+        (supabase as any).from("Progetti").select("*").order("data_creazione", { ascending: false }),
+        (supabase as any).from("Spazi_AI").select("*"),
+        (supabase as any)
           .from("Contesti_Conversazione")
           .select("*")
           .order("data_ultimo_aggiornamento", { ascending: false })
@@ -88,7 +88,7 @@ export default function Dashboard() {
     if (!nuovaRichiesta.trim()) return
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("Progetti")
         .insert([
           {

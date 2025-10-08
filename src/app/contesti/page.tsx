@@ -41,14 +41,14 @@ export default function Contesti() {
   const caricaDati = async () => {
     try {
       const [contestiRes, spaziRes, tasksRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from('Contesti_Conversazione')
           .select('*')
           .order('data_ultimo_aggiornamento', { ascending: false }),
-        supabase
+        (supabase as any)
           .from('Spazi_AI')
           .select('*'),
-        supabase
+        (supabase as any)
           .from('Task')
           .select('*')
       ])
@@ -82,7 +82,7 @@ export default function Contesti() {
         }
       }
 
-      const contestoData = {
+      const contestoData: Record<string, unknown> = {
         titolo_conversazione: formData.titolo_conversazione,
         id_spazio_ai: formData.id_spazio_ai || null,
         id_task: formData.id_task || null,
@@ -91,14 +91,14 @@ export default function Contesti() {
       }
 
       if (editingContesto) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('Contesti_Conversazione')
           .update(contestoData)
           .eq('id', editingContesto.id)
         
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('Contesti_Conversazione')
           .insert([contestoData])
         
@@ -117,7 +117,7 @@ export default function Contesti() {
     if (!confirm('Sei sicuro di voler eliminare questo contesto di conversazione?')) return
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('Contesti_Conversazione')
         .delete()
         .eq('id', id)
