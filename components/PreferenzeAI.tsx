@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { UserProfileManager, AITool, UserPreferences } from "@/lib/userProfile"
+import { SupabaseUserProfileManager, AITool, UserPreferences } from "@/lib/supabaseUserProfile"
 import {
   Plus,
   Settings,
@@ -18,7 +18,8 @@ import {
   DollarSign,
   Bell,
   Palette,
-  Edit3
+  Edit3,
+  Loader2
 } from "lucide-react"
 
 interface PreferenzeAIProps {
@@ -28,6 +29,8 @@ interface PreferenzeAIProps {
 export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
   const [aiTools, setAiTools] = useState<AITool[]>([])
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [availableAIOptions, setAvailableAIOptions] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
   const [showAddTool, setShowAddTool] = useState(false)
   const [showAddTaskType, setShowAddTaskType] = useState(false)
   const [newTaskType, setNewTaskType] = useState('')
@@ -42,70 +45,102 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
     loadData()
   }, [])
 
-  const loadData = () => {
-    const profile = UserProfileManager.getProfile()
-    if (profile) {
-      setAiTools(profile.aiTools)
-      setPreferences(profile.preferences)
-    } else {
-      const defaultProfile = UserProfileManager.createDefaultProfile()
-      setAiTools(defaultProfile.aiTools)
-      setPreferences(defaultProfile.preferences)
-    }
-  }
-
-  const handleAddTool = () => {
-    if (newTool.nome && newTool.tipo) {
-      UserProfileManager.addAITool(newTool as Omit<AITool, 'id'>)
-      setNewTool({ nome: '', tipo: 'chat', piano: 'free', attivo: true })
-      setShowAddTool(false)
-      loadData()
-    }
-  }
-
-  const handleUpdateTool = (toolId: string, updates: Partial<AITool>) => {
-    UserProfileManager.updateAITool(toolId, updates)
-    loadData()
-  }
-
-  const handleRemoveTool = (toolId: string) => {
-    UserProfileManager.removeAITool(toolId)
-    loadData()
-  }
-
-  const handleUpdatePreferences = (updates: Partial<UserPreferences>) => {
-    if (preferences) {
-      const newPreferences = { ...preferences, ...updates }
-      UserProfileManager.updatePreferences(updates)
-      setPreferences(newPreferences)
-    }
-  }
-
-  const handleAddTaskType = () => {
-    if (newTaskType.trim() && preferences) {
-      const updatedPreferences = {
-        ...preferences,
-        aiPreferito: {
-          ...preferences.aiPreferito,
-          [newTaskType.toLowerCase()]: aiTools.length > 0 ? aiTools[0].nome : 'ChatGPT-4'
-        }
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      
+      // Assicurati che l'utente sia autenticato
+      const isAuthenticated = await SupabaseUserProfileManager.ensureAuthenticated()
+      if (!isAuthenticated) {
+        console.error('Impossibile autenticare l\'utente')
+        return
       }
-      UserProfileManager.updatePreferences({ aiPreferito: updatedPreferences.aiPreferito })
-      setPreferences(updatedPreferences)
+
+      // Carica strumenti AI e preferenze in parallelo
+      const [tools, prefs, aiOptions] = await Promise.all([
+        SupabaseUserProfileManager.getAITools(),
+        SupabaseUserProfileManager.getUserPreferences(),
+        SupabaseUserProfileManager.getAvailableAIOptions()
+      ])
+
+      setAiTools(tools)
+      setPreferences(prefs)
+      setAvailableAIOptions(aiOptions)
+    } catch (error) {
+      console.error('Errore nel caricamento dati:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddTool = async () => {
+    if (newTool.nome && newTool.tipo) {
+      try {
+        const addedTool = await SupabaseUserProfileManager.addAITool(newTool as Omit<AITool, 'id'>)
+        if (addedTool) {
+          setNewTool({ nome: '', tipo: 'chat', piano: 'free', attivo: true })
+          setShowAddTool(false)
+          await loadData() // Ricarica tutti i dati per aggiornare le opzioni AI
+        }
+      } catch (error) {
+        console.error('Errore nell\'aggiunta strumento:', error)
+      }
+    }
+  }
+
+  const handleUpdateTool = async (toolId: string, updates: Partial<AITool>) => {
+    try {
+      const success = await SupabaseUserProfileManager.updateAITool(toolId, updates)
+      if (success) {
+        await loadData() // Ricarica i dati
+      }
+    } catch (error) {
+      console.error('Errore nell\'aggiornamento strumento:', error)
+    }
+  }
+
+  const handleRemoveTool = async (toolId: string) => {
+    try {
+      const success = await SupabaseUserProfileManager.removeAITool(toolId)
+      if (success) {
+        await loadData() // Ricarica i dati
+      }
+    } catch (error) {
+      console.error('Errore nella rimozione strumento:', error)
+    }
+  }
+
+  const handleUpdatePreferences = async (updates: Partial<UserPreferences>) => {
+    if (preferences) {
+      try {
+        const success = await SupabaseUserProfileManager.updateUserPreferences(updates)
+        if (success) {
+          const newPreferences = { ...preferences, ...updates }
+          setPreferences(newPreferences)
+        }
+      } catch (error) {
+        console.error('Errore nell\'aggiornamento preferenze:', error)
+      }
+    }
+  }
+
+  const handleAddTaskType = async () => {
+    if (newTaskType.trim() && preferences) {
+      const updatedAiPreferito = {
+        ...preferences.aiPreferito,
+        [newTaskType.toLowerCase()]: availableAIOptions.length > 0 ? availableAIOptions[0] : 'ChatGPT-4'
+      }
+      
+      await handleUpdatePreferences({ aiPreferito: updatedAiPreferito })
       setNewTaskType('')
       setShowAddTaskType(false)
     }
   }
 
-  const handleRemoveTaskType = (taskType: string) => {
+  const handleRemoveTaskType = async (taskType: string) => {
     if (preferences && taskType !== 'generico') { // Non permettere di rimuovere il tipo generico
       const { [taskType]: removed, ...remainingPreferences } = preferences.aiPreferito
-      const updatedPreferences = {
-        ...preferences,
-        aiPreferito: remainingPreferences
-      }
-      UserProfileManager.updatePreferences({ aiPreferito: updatedPreferences.aiPreferito })
-      setPreferences(updatedPreferences)
+      await handleUpdatePreferences({ aiPreferito: remainingPreferences })
     }
   }
 
@@ -131,19 +166,6 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
     }
   }
 
-  // CORREZIONE 1: Usa gli strumenti AI realmente configurati + opzioni di default
-  const getAvailableAIOptions = () => {
-    const userAITools = aiTools.filter(tool => tool.attivo).map(tool => tool.nome)
-    const defaultOptions = [
-      'ChatGPT-4', 'Claude', 'Gemini', 'GitHub Copilot', 'Midjourney', 
-      'DALL-E', 'Stable Diffusion', 'Runway', 'ElevenLabs', 'Perplexity'
-    ]
-    
-    // Combina strumenti utente + default, rimuovendo duplicati
-    const allOptions = [...new Set([...userAITools, ...defaultOptions])]
-    return allOptions
-  }
-
   const formatTaskTypeName = (taskType: string) => {
     const typeNames: { [key: string]: string } = {
       'generico': 'Progetti Generici',
@@ -160,7 +182,32 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
     return typeNames[taskType] || taskType.charAt(0).toUpperCase() + taskType.slice(1)
   }
 
-  if (!preferences) return <div>Caricamento...</div>
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="ml-2">Caricamento preferenze...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!preferences) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <div className="text-center py-12">
+          <p>Errore nel caricamento delle preferenze</p>
+          <button 
+            onClick={loadData}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -306,7 +353,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
         </div>
       </div>
 
-      {/* CORREZIONE 2: Sezione AI Preferiti per Tipo di Task con possibilità di aggiungere nuovi tipi */}
+      {/* Sezione AI Preferiti per Tipo di Task con possibilità di aggiungere nuovi tipi */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -381,7 +428,7 @@ export default function PreferenzeAI({ onClose }: PreferenzeAIProps) {
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                {getAvailableAIOptions().map((option) => (
+                {availableAIOptions.map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
