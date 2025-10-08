@@ -4,8 +4,14 @@ import { useState, useEffect } from "react"
 // import { supabase } from "@/lib/supabase" // Disabilitato temporaneamente
 import type { Progetto, SpazioAI, ContestoConversazione } from "@/types/database"
 import { UserProfileManager } from "@/lib/userProfile"
+import { AppTrackingManager } from "@/lib/appTracking"
+import { NotificationManager } from "@/lib/notificationSystem"
 import PreferenzeAI from "@/components/PreferenzeAI"
 import CronologiaPersonalizzata from "@/components/CronologiaPersonalizzata"
+import ValutazioneProgetto from "@/components/ValutazioneProgetto"
+import SupervisioneAgenti from "@/components/SupervisioneAgenti"
+import AnalyticsAvanzate from "@/components/AnalyticsAvanzate"
+import CentroNotifiche from "@/components/CentroNotifiche"
 import {
   Plus,
   Brain,
@@ -18,7 +24,11 @@ import {
   Settings,
   History,
   User,
-  X
+  X,
+  Bell,
+  Star,
+  Activity,
+  TrendingUp
 } from "lucide-react"
 import Link from "next/link"
 
@@ -52,7 +62,12 @@ export default function Dashboard() {
   const [richiestaAttiva, setRichiestaAttiva] = useState<string | null>(null)
   const [showPreferenze, setShowPreferenze] = useState(false)
   const [showCronologia, setShowCronologia] = useState(false)
+  const [showValutazione, setShowValutazione] = useState(false)
+  const [showAgenti, setShowAgenti] = useState(false)
+  const [showAnalytics, setShowAnalytics] = useState(false)
+  const [showNotifiche, setShowNotifiche] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [progettoPerValutazione, setProgettoPerValutazione] = useState<any>(null)
 
   useEffect(() => {
     caricaDati()
@@ -120,7 +135,32 @@ export default function Dashboard() {
         richiesta: nuovaRichiesta,
         tipoTask: result.tipo_task,
         aiUsato: result.spazio_ai_suggerito?.split(' - ')[0] || null,
-        suggerimentoSeguito: false
+        suggerimentoSeguito: false,
+        valutazione: 0,
+        note: ''
+      })
+
+      // Traccia l'utilizzo dell'app
+      AppTrackingManager.saveAppUsage({
+        id: Date.now().toString(),
+        appName: result.spazio_ai_suggerito?.split(' - ')[0] || 'Generico',
+        taskType: result.tipo_task,
+        projectId: Date.now().toString(),
+        startTime: new Date(),
+        duration: 0,
+        success: true,
+        difficulty: 'medio',
+        satisfaction: 0,
+        wouldUseAgain: true
+      })
+
+      // Notifica di successo
+      NotificationManager.addNotification({
+        type: 'success',
+        title: 'Analisi Completata',
+        message: `Suggerimenti generati per il task di tipo "${result.tipo_task}"`,
+        priority: 'medium',
+        category: 'app'
       })
     } catch (error) {
       console.error("Errore analisi:", error)
@@ -162,6 +202,42 @@ export default function Dashboard() {
     alert("Prompt copiato negli appunti!")
   }
 
+  const apriValutazione = (progetto: any) => {
+    setProgettoPerValutazione(progetto)
+    setShowValutazione(true)
+  }
+
+  const completaProgetto = (valutazione: any) => {
+    // Salva la valutazione nel tracking
+    AppTrackingManager.saveAppUsage({
+      id: valutazione.usageId || Date.now().toString(),
+      appName: valutazione.appName || 'Generico',
+      taskType: valutazione.taskType || 'generico',
+      projectId: valutazione.projectId || Date.now().toString(),
+      startTime: new Date(),
+      endTime: new Date(),
+      rating: valutazione.rating,
+      notes: valutazione.notes,
+      success: valutazione.success,
+      difficulty: 'medio',
+      satisfaction: valutazione.satisfaction,
+      wouldUseAgain: true
+    })
+
+    // Notifica di completamento
+    NotificationManager.addNotification({
+      type: 'success',
+      title: 'Progetto Completato',
+      message: `Progetto valutato con ${valutazione.rating} stelle`,
+      priority: 'medium',
+      category: 'performance'
+    })
+
+    // Chiudi il modal
+    setShowValutazione(false)
+    setProgettoPerValutazione(null)
+  }
+
   const getStatoColor = (stato: string) => {
     switch (stato) {
       case "Da Iniziare":
@@ -190,6 +266,32 @@ export default function Dashboard() {
               Dashboard AI Intelligente
             </h1>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowNotifiche(true)}
+                className="relative flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Centro Notifiche"
+              >
+                <Bell className="w-4 h-4" />
+                {NotificationManager.getUnreadCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {NotificationManager.getUnreadCount()}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setShowAnalytics(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Analytics Avanzate"
+              >
+                <TrendingUp className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowAgenti(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Supervisione Agenti"
+              >
+                <Activity className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => setShowPreferenze(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -282,13 +384,26 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => copiaPrompt(suggerimento.prompt_ottimizzato)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Copy className="w-4 h-4" />
-                  Copia Prompt Ottimizzato
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => copiaPrompt(suggerimento.prompt_ottimizzato)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copia Prompt Ottimizzato
+                  </button>
+                  <button
+                    onClick={() => apriValutazione({
+                      richiesta: nuovaRichiesta,
+                      suggerimento: suggerimento,
+                      timestamp: new Date()
+                    })}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    <Star className="w-4 h-4" />
+                    Valuta Progetto
+                  </button>
+                </div>
 
                 <p className="text-sm text-blue-600">Incolla nello spazio AI suggerito</p>
 
@@ -535,6 +650,42 @@ export default function Dashboard() {
             />
           </div>
         </div>
+      )}
+
+      {/* Modal Valutazione Progetto */}
+      {showValutazione && progettoPerValutazione && (
+        <ValutazioneProgetto
+          projectId={progettoPerValutazione?.id || 'temp'}
+          appName={progettoPerValutazione?.appName || 'Generico'}
+          taskType={progettoPerValutazione?.taskType || 'generico'}
+          usageId={progettoPerValutazione?.usageId}
+          isOpen={showValutazione}
+          onClose={() => setShowValutazione(false)}
+        />
+      )}
+
+      {/* Modal Supervisione Agenti */}
+      {showAgenti && (
+        <SupervisioneAgenti
+          isOpen={showAgenti}
+          onClose={() => setShowAgenti(false)}
+        />
+      )}
+
+      {/* Modal Analytics Avanzate */}
+      {showAnalytics && (
+        <AnalyticsAvanzate
+          isOpen={showAnalytics}
+          onClose={() => setShowAnalytics(false)}
+        />
+      )}
+
+      {/* Modal Centro Notifiche */}
+      {showNotifiche && (
+        <CentroNotifiche
+          isOpen={showNotifiche}
+          onClose={() => setShowNotifiche(false)}
+        />
       )}
     </div>
   )
