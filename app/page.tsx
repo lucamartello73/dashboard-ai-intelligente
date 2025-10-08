@@ -149,33 +149,33 @@ export default function Dashboard() {
       UserProfileManager.addToCronologia({
         richiesta: nuovaRichiesta,
         tipoTask: result.tipo_task,
-        aiUsato: result.spazio_ai_suggerito?.split(' - ')[0] || null,
+        aiUsato: result.spazio_ai_suggerito?.split(" - ")[0] || null,
         suggerimentoSeguito: false,
         valutazione: 0,
-        note: ''
+        note: ""
       })
 
       // Traccia l'utilizzo dell'app
       AppTrackingManager.saveAppUsage({
         id: Date.now().toString(),
-        appName: result.spazio_ai_suggerito?.split(' - ')[0] || 'Generico',
+        appName: result.spazio_ai_suggerito?.split(" - ")[0] || "Generico",
         taskType: result.tipo_task,
         projectId: Date.now().toString(),
         startTime: new Date(),
         duration: 0,
         success: true,
-        difficulty: 'medio',
+        difficulty: "medio",
         satisfaction: 0,
         wouldUseAgain: true
       })
 
       // Notifica di successo
       NotificationManager.addNotification({
-        type: 'success',
-        title: 'Analisi Completata',
+        type: "success",
+        title: "Analisi Completata",
         message: `Suggerimenti generati per il task di tipo "${result.tipo_task}"`,
-        priority: 'medium',
-        category: 'app'
+        priority: "medium",
+        category: "app"
       })
     } catch (error) {
       console.error("Errore analisi:", error)
@@ -222,35 +222,40 @@ export default function Dashboard() {
     setShowValutazione(true)
   }
 
-  const completaProgetto = (valutazione: any) => {
-    // Salva la valutazione nel tracking
-    AppTrackingManager.saveAppUsage({
-      id: valutazione.usageId || Date.now().toString(),
-      appName: valutazione.appName || 'Generico',
-      taskType: valutazione.taskType || 'generico',
-      projectId: valutazione.projectId || Date.now().toString(),
-      startTime: new Date(),
-      endTime: new Date(),
-      rating: valutazione.rating,
-      notes: valutazione.notes,
-      success: valutazione.success,
-      difficulty: 'medio',
-      satisfaction: valutazione.satisfaction,
-      wouldUseAgain: true
-    })
+  const completaProgetto = async (valutazione: any) => {
+    try {
+      const response = await fetch("/api/orchestrator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          valutazione: valutazione,
+          userProfile: userProfile 
+        }),
+      });
 
-    // Notifica di completamento
-    NotificationManager.addNotification({
-      type: 'success',
-      title: 'Progetto Completato',
-      message: `Progetto valutato con ${valutazione.rating} stelle`,
-      priority: 'medium',
-      category: 'performance'
-    })
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Errore salvataggio valutazione:", errorText);
+        alert("Errore durante il salvataggio della valutazione");
+        return;
+      }
 
-    // Chiudi il modal
-    setShowValutazione(false)
-    setProgettoPerValutazione(null)
+      // Notifica di completamento
+      NotificationManager.addNotification({
+        type: 'success',
+        title: 'Progetto Completato',
+        message: `Progetto valutato con ${valutazione.rating} stelle`,
+        priority: 'medium',
+        category: 'performance'
+      });
+
+      // Chiudi il modal
+      setShowValutazione(false);
+      setProgettoPerValutazione(null);
+    } catch (error) {
+      console.error("Errore salvataggio valutazione:", error);
+      alert("Errore durante il salvataggio della valutazione");
+    }
   }
 
   const getStatoColor = (stato: string) => {
@@ -338,7 +343,7 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-xl text-gray-600">
-            Il tuo maestro d&apos;orchestra per l&apos;automazione
+            Il tuo maestro d'orchestra per l'automazione
           </p>
         </div>
 
@@ -443,62 +448,46 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Cronologia Richieste */}
-        {cronologiaRichieste.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <div className="flex items-center gap-3 mb-6">
-              <History className="w-8 h-8 text-purple-600" />
-              <h2 className="text-2xl font-semibold text-gray-900">Richieste Precedenti</h2>
-            </div>
+        {/* Sezione Cronologia */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <History className="w-8 h-8 text-gray-600" />
+            <h2 className="text-2xl font-semibold text-gray-900">Cronologia</h2>
+          </div>
 
-            <div className="space-y-4">
-              {cronologiaRichieste.map((voce) => (
-                <div 
-                  key={voce.id} 
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    richiestaAttiva === voce.id 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+          <div className="space-y-4">
+            {cronologiaRichieste.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Nessuna richiesta nella cronologia</p>
+            ) : (
+              cronologiaRichieste.map((voce) => (
+                <div
+                  key={voce.id}
+                  className={`p-4 border rounded-lg transition-all duration-200 ${
+                    voce.id === richiestaAttiva ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-gray-50"
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <p className="text-gray-900 font-medium mb-1">
-                        {voce.richiesta.length > 100 
-                          ? `${voce.richiesta.substring(0, 100)}...` 
-                          : voce.richiesta
-                        }
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {voce.timestamp.toLocaleString('it-IT')} • Tipo: {voce.suggerimento.tipo_task}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-gray-800">{voce.richiesta}</p>
+                    <span className="text-sm text-gray-500">
+                      {new Date(voce.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-end">
                     <button
                       onClick={() => caricaRichiestaStorica(voce)}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                      className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded-lg text-sm"
                     >
                       <ArrowRight className="w-4 h-4" />
                       Ricarica
                     </button>
                   </div>
-                  
-                  {richiestaAttiva === voce.id && (
-                    <div className="mt-3 p-3 bg-white rounded border">
-                      <p className="text-sm text-gray-600 mb-2">
-                        <strong>AI suggerita:</strong> {voce.suggerimento.spazio_ai_suggerito}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <strong>Computer:</strong> {voce.suggerimento.computer_suggerito}
-                      </p>
-                    </div>
-                  )}
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Griglia delle sezioni */}
+        {/* Sezioni Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Progetti Attivi */}
           <div className="bg-white rounded-xl shadow-lg p-6">
@@ -640,7 +629,7 @@ export default function Dashboard() {
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm">
-          Dashboard AI Intelligente - Il tuo maestro d&apos;orchestra per l&apos;automazione
+          Dashboard AI Intelligente - Il tuo maestro d'orchestra per l'automazione
         </div>
       </div>
 
@@ -725,3 +714,4 @@ export default function Dashboard() {
 }
 // Force deployment Wed Oct  8 04:56:15 EDT 2025
 // Forced deployment trigger
+

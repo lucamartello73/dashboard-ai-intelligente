@@ -1,8 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
 
 export async function POST(request: NextRequest) {
   try {
-    const { richiesta, userProfile } = await request.json()
+    const { richiesta, userProfile, valutazione } = await request.json();
+
+    if (valutazione) {
+      // Logica per salvare la valutazione
+      const { data, error } = await supabase
+        .from('valutazioni_progetto') // Assicurati che questa tabella esista
+        .insert([
+          {
+            project_id: valutazione.projectId,
+            app_name: valutazione.appName,
+            task_type: valutazione.taskType,
+            rating: valutazione.rating,
+            notes: valutazione.notes,
+            success: valutazione.success,
+            difficulty: valutazione.difficulty,
+            satisfaction: valutazione.satisfaction,
+            would_use_again: valutazione.wouldUseAgain,
+            user_profile_id: userProfile?.id // Associa all'ID del profilo utente se disponibile
+          }
+        ]);
+
+      if (error) {
+        console.error("Errore salvataggio valutazione Supabase:", error);
+        return new NextResponse("Errore salvataggio valutazione", { status: 500 });
+      }
+      return NextResponse.json({ message: "Valutazione salvata con successo" });
+    }
 
     if (!richiesta || !richiesta.trim()) {
       return NextResponse.json(
@@ -13,6 +46,27 @@ export async function POST(request: NextRequest) {
 
     // Analisi personalizzata basata sul profilo utente
     const suggerimento = analizzaRichiestaPersonalizzata(richiesta, userProfile)
+
+    // Salva la richiesta e il suggerimento nel database Supabase
+    const { data, error: dbError } = await supabase
+      .from("prompts")
+      .insert([
+        {
+          prompt_text: richiesta,
+          response_text: JSON.stringify(suggerimento), // Salva l'oggetto suggerimento come JSON stringa
+          ai_agent: suggerimento.spazio_ai_suggerito || "Generico",
+          // Aggiungi altri campi se necessario, come category_path, tags, ecc.
+        },
+      ])
+      .select()
+
+    if (dbError) {
+      console.error("Errore salvataggio Supabase:", dbError)
+      return NextResponse.json(
+        { error: "Errore durante il salvataggio dei dati su Supabase" },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(suggerimento)
   } catch (error) {
