@@ -1,7 +1,7 @@
 "use client"
 
-import Contesti from "../src/app/contesti/page"
+import Dashboard from "../src/app/page"
 
 export default function SyntheticV0PageForDeployment() {
-  return <Contesti />
+  return <Dashboard />
 }
