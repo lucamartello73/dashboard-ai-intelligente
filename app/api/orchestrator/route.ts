@@ -297,43 +297,95 @@ function addLearningInsights(userProfile: any, tipoTask: string): string {
 }
 
 function getComputerRecommendation(taskType: string, taskDescription: string): string {
-  // Simulazione della logica di raccomandazione computer
-  // In un'implementazione reale, questo dovrebbe interfacciarsi con ComputerManager
-  
   const taskLower = taskDescription.toLowerCase()
   
-  // Computer 1: Workstation Principale (4 schermi, più potente)
-  // Computer 2: Computer Secondario (3 schermi, standard)  
-  // Computer 3: Computer Portatile (1 schermo, base)
+  // Analizza la descrizione per identificare specifiche configurazioni hardware
+  const hasMultipleScreens = taskLower.includes('4 schermi') || taskLower.includes('quattro schermi') || taskLower.includes('4 monitor')
+  const hasThreeScreens = taskLower.includes('3 schermi') || taskLower.includes('tre schermi') || taskLower.includes('3 monitor')
+  const hasSingleScreen = taskLower.includes('1 schermo') || taskLower.includes('un schermo') || taskLower.includes('1 monitor') || taskLower.includes('portatile')
+  const hasHighPerformance = taskLower.includes('potente') || taskLower.includes('workstation') || taskLower.includes('gaming') || taskLower.includes('i7') || taskLower.includes('i9') || taskLower.includes('rtx') || taskLower.includes('32gb') || taskLower.includes('64gb')
+  const isLaptop = taskLower.includes('portatile') || taskLower.includes('laptop') || taskLower.includes('notebook')
   
-  if (taskType === 'sviluppo' || taskLower.includes('codice') || taskLower.includes('programmazione')) {
-    return 'Workstation Principale (4 schermi) - Ideale per sviluppo con IDE, browser, documentazione e terminal su schermi separati'
+  // Raccomandazioni specifiche basate su task type e hardware disponibile
+  if (taskType === 'sviluppo' || taskLower.includes('codice') || taskLower.includes('programmazione') || taskLower.includes('sviluppo')) {
+    if (hasMultipleScreens && hasHighPerformance) {
+      return 'Workstation con 4 schermi - Configurazione ottimale per sviluppo: IDE principale, browser per testing, documentazione/Stack Overflow, e terminal/logs su schermi separati. La potenza extra gestisce compilation e virtual machines.'
+    } else if (hasThreeScreens) {
+      return 'Computer con 3 schermi - Buona configurazione per sviluppo: IDE principale, browser per testing e documentazione su schermi separati.'
+    } else if (hasSingleScreen || isLaptop) {
+      return 'Computer portatile - Adatto per sviluppo mobile o quando serve concentrazione. Usa workspace virtuali per organizzare IDE, browser e terminal.'
+    }
+    return 'Computer con 4 schermi (se disponibile) - Lo sviluppo beneficia enormemente di schermi multipli per IDE, testing, documentazione e debugging simultanei.'
   }
   
-  if (taskType === 'analisi' || taskLower.includes('dati') || taskLower.includes('grafici')) {
-    return 'Workstation Principale (4 schermi) - Perfetto per visualizzare dataset, grafici, dashboard e documentazione simultaneamente'
+  if (taskType === 'analisi' || taskLower.includes('dati') || taskLower.includes('grafici') || taskLower.includes('excel') || taskLower.includes('dashboard')) {
+    if (hasMultipleScreens) {
+      return 'Workstation con 4 schermi - Ideale per analisi dati: dataset principale, grafici/visualizzazioni, documentazione metodologica, e dashboard di controllo su schermi separati.'
+    } else if (hasThreeScreens) {
+      return 'Computer con 3 schermi - Ottimo per analisi: dati principali, visualizzazioni e documentazione su schermi separati.'
+    }
+    return 'Computer con schermi multipli - L\'analisi dati richiede visualizzazione simultanea di dataset, grafici e documentazione per correlazioni efficaci.'
   }
   
-  if (taskType === 'design' || taskLower.includes('grafica') || taskLower.includes('creatività')) {
-    return 'Computer Secondario (3 schermi) - Ottimo per design con software principale, riferimenti e palette colori'
+  if (taskType === 'design' || taskLower.includes('grafica') || taskLower.includes('creatività') || taskLower.includes('photoshop') || taskLower.includes('illustrator')) {
+    if (hasMultipleScreens && hasHighPerformance) {
+      return 'Workstation con 4 schermi - Configurazione professionale per design: software principale, palette/strumenti, riferimenti/mood board, e preview/output su schermi separati.'
+    } else if (hasThreeScreens) {
+      return 'Computer con 3 schermi - Buona configurazione per design: software principale, riferimenti e palette colori su schermi separati.'
+    }
+    return 'Computer con schermi multipli - Il design grafico beneficia di spazio per software, riferimenti e preview simultanei.'
   }
   
-  if (taskType === 'marketing' || taskLower.includes('campagna') || taskLower.includes('social')) {
-    return 'Computer Secondario (3 schermi) - Ideale per gestire contenuti, social media e analytics'
+  if (taskType === 'marketing' || taskLower.includes('campagna') || taskLower.includes('social') || taskLower.includes('content')) {
+    if (hasThreeScreens || hasMultipleScreens) {
+      return 'Computer con 3+ schermi - Perfetto per marketing: gestione social media, analytics/metriche, e creazione contenuti su schermi separati per workflow efficiente.'
+    }
+    return 'Computer con schermi multipli - Il marketing digitale richiede monitoraggio simultaneo di social media, analytics e creazione contenuti.'
   }
   
-  if (taskType === 'creativo' || taskLower.includes('scrittura') || taskLower.includes('articolo')) {
-    return 'Computer Portatile (1 schermo) - Perfetto per concentrarsi sulla scrittura senza distrazioni'
+  if (taskType === 'creativo' || taskLower.includes('scrittura') || taskLower.includes('articolo') || taskLower.includes('blog') || taskLower.includes('copywriting')) {
+    if (hasSingleScreen || isLaptop) {
+      return 'Computer portatile o singolo schermo - Ideale per scrittura creativa: ambiente minimalista che favorisce concentrazione e flow creativo senza distrazioni visive.'
+    }
+    return 'Computer con schermo singolo - La scrittura creativa beneficia di un ambiente focalizzato senza distrazioni multiple.'
   }
   
-  if (taskLower.includes('presentazione') || taskLower.includes('meeting')) {
-    return 'Computer Portatile (1 schermo) - Ideale per mobilità e presentazioni'
+  if (taskLower.includes('presentazione') || taskLower.includes('meeting') || taskLower.includes('pitch') || taskLower.includes('demo')) {
+    if (isLaptop || hasSingleScreen) {
+      return 'Computer portatile - Perfetto per presentazioni: mobilità per meeting, facilità di connessione a proiettori, e focus su singola applicazione.'
+    }
+    return 'Computer portatile - Le presentazioni richiedono mobilità e semplicità di setup per meeting e demo.'
   }
   
-  if (taskLower.includes('ricerca') || taskLower.includes('studio')) {
-    return 'Computer Secondario (3 schermi) - Ottimo per ricerca con browser, note e documenti aperti'
+  if (taskLower.includes('ricerca') || taskLower.includes('studio') || taskLower.includes('documentazione')) {
+    if (hasThreeScreens || hasMultipleScreens) {
+      return 'Computer con 3+ schermi - Ottimo per ricerca: browser principale, note/documenti, e fonti/riferimenti su schermi separati per ricerca efficiente.'
+    }
+    return 'Computer con schermi multipli - La ricerca beneficia di visualizzazione simultanea di fonti, note e documenti di lavoro.'
   }
   
-  // Default per task generici
-  return 'Computer Secondario (3 schermi) - Configurazione bilanciata per la maggior parte dei task'
+  if (taskLower.includes('video') || taskLower.includes('editing') || taskLower.includes('montaggio') || taskLower.includes('premiere')) {
+    if (hasMultipleScreens && hasHighPerformance) {
+      return 'Workstation con 4 schermi - Configurazione professionale per video editing: timeline principale, preview/monitor, media browser, e strumenti/effetti su schermi separati.'
+    }
+    return 'Computer ad alte prestazioni con schermi multipli - Il video editing richiede potenza di calcolo e spazio per timeline, preview e strumenti.'
+  }
+  
+  // Analisi specifica della configurazione hardware menzionata
+  if (hasMultipleScreens && hasHighPerformance) {
+    return 'Workstation con 4 schermi - La tua configurazione più potente è ideale per task complessi che richiedono multitasking intensivo e visualizzazione simultanea di multiple applicazioni.'
+  } else if (hasThreeScreens) {
+    return 'Computer con 3 schermi - Configurazione bilanciata che offre buon compromesso tra produttività multi-schermo e semplicità di gestione.'
+  } else if (hasSingleScreen || isLaptop) {
+    return 'Computer portatile - Ideale per task che richiedono concentrazione, mobilità o quando la semplicità è preferibile al multitasking.'
+  }
+  
+  // Default intelligente basato sul tipo di task
+  if (taskType === 'sviluppo' || taskType === 'analisi') {
+    return 'Computer con 4 schermi (se disponibile) - Task complessi beneficiano di visualizzazione simultanea di multiple applicazioni e documenti.'
+  } else if (taskType === 'creativo') {
+    return 'Computer con schermo singolo - Task creativi beneficiano di ambiente focalizzato senza distrazioni.'
+  } else {
+    return 'Computer con 3 schermi - Configurazione bilanciata adatta alla maggior parte dei task professionali.'
+  }
 }
