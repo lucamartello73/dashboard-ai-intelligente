@@ -37,6 +37,12 @@ export default function Dashboard() {
   const [progetti, setProgetti] = useState<Progetto[]>([])
   const [spaziAI, setSpaziAI] = useState<SpazioAI[]>([])
   const [contesti, setContesti] = useState<ContestoConversazione[]>([])
+  const [computers, setComputers] = useState<Array<{
+    id: string;
+    nome: string;
+    schermi: number;
+    stato: string;
+  }>>([])
   const [nuovaRichiesta, setNuovaRichiesta] = useState("")
   const [suggerimento, setSuggerimento] = useState<{
     tipo_task: string
@@ -93,6 +99,13 @@ export default function Dashboard() {
       setProgetti([])
       setSpaziAI([])
       setContesti([])
+      setComputers([
+        { id: "comp1", nome: "Analista Senior", schermi: 3, stato: "Disponibile" },
+        { id: "comp2", nome: "Manager Operativo", schermi: 2, stato: "Disponibile" },
+        { id: "comp3", nome: "Designer Grafico", schermi: 2, stato: "In Uso" },
+        { id: "comp4", nome: "Sviluppatore Backend", schermi: 1, stato: "Disponibile" },
+        { id: "comp5", nome: "Data Scientist", schermi: 4, stato: "Disponibile" },
+      ])
     } catch (error) {
       console.error("Errore caricamento dati:", error)
     }
@@ -604,21 +617,23 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-3">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-1">Analista Senior</h4>
-                <p className="text-sm text-gray-600 mb-2">3 schermi</p>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                  Disponibile
-                </span>
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-1">Manager Operativo</h4>
-                <p className="text-sm text-gray-600 mb-2">2 schermi</p>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                  Disponibile
-                </span>
-              </div>
+              {computers.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">Nessun computer configurato</p>
+              ) : (
+                computers.map((computer) => (
+                  <div key={computer.id} className="p-3 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-1">{computer.nome}</h4>
+                    <p className="text-sm text-gray-600 mb-2">{computer.schermi} schermi</p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      computer.stato === "Disponibile" ? "bg-green-100 text-green-800" :
+                      computer.stato === "In Uso" ? "bg-yellow-100 text-yellow-800" :
+                      "bg-gray-100 text-gray-800"
+                    }`}>
+                      {computer.stato}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
