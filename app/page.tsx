@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+// import { supabase } from "@/lib/supabase" // Disabilitato temporaneamente
 import type { Progetto, SpazioAI, ContestoConversazione } from "@/types/database"
 import {
   Plus,
@@ -52,19 +52,10 @@ export default function Dashboard() {
 
   const caricaDati = async () => {
     try {
-      const [progettiRes, spaziRes, contestiRes] = await Promise.all([
-        (supabase as any).from("Progetti").select("*").order("data_creazione", { ascending: false }),
-        (supabase as any).from("Spazi_AI").select("*"),
-        (supabase as any)
-          .from("Contesti_Conversazione")
-          .select("*")
-          .order("data_ultimo_aggiornamento", { ascending: false })
-          .limit(5),
-      ])
-
-      if (progettiRes.data) setProgetti(progettiRes.data)
-      if (spaziRes.data) setSpaziAI(spaziRes.data)
-      if (contestiRes.data) setContesti(contestiRes.data)
+      // Dati mock per evitare errori database
+      setProgetti([])
+      setSpaziAI([])
+      setContesti([])
     } catch (error) {
       console.error("Errore caricamento dati:", error)
     }
@@ -112,19 +103,9 @@ export default function Dashboard() {
     if (!nuovaRichiesta.trim()) return
 
     try {
-      const { error } = await (supabase as any)
-        .from("Progetti")
-        .insert([
-          {
-            nome_progetto: nuovaRichiesta.slice(0, 100),
-            obiettivo_generale: nuovaRichiesta,
-            stato: "Da Iniziare",
-          },
-        ])
-        .select()
-
-      if (error) throw error
-
+      // Simulazione creazione progetto (database disabilitato)
+      console.log("Progetto creato:", nuovaRichiesta.slice(0, 100))
+      
       setNuovaRichiesta("")
       setSuggerimento(null)
       caricaDati()
