@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react"
 // import { supabase } from "@/lib/supabase" // Disabilitato temporaneamente
 import type { Progetto, SpazioAI, ContestoConversazione } from "@/types/database"
+import { UserProfileManager } from "@/lib/userProfile"
+import PreferenzeAI from "@/components/PreferenzeAI"
+import CronologiaPersonalizzata from "@/components/CronologiaPersonalizzata"
 import {
   Plus,
   Brain,
@@ -14,6 +17,8 @@ import {
   ArrowRight,
   Settings,
   History,
+  User,
+  X
 } from "lucide-react"
 import Link from "next/link"
 
@@ -45,10 +50,25 @@ export default function Dashboard() {
     timestamp: Date
   }>>([])
   const [richiestaAttiva, setRichiestaAttiva] = useState<string | null>(null)
+  const [showPreferenze, setShowPreferenze] = useState(false)
+  const [showCronologia, setShowCronologia] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
     caricaDati()
+    loadUserProfile()
   }, [])
+
+  const loadUserProfile = () => {
+    const profile = UserProfileManager.getProfile()
+    if (!profile) {
+      const defaultProfile = UserProfileManager.createDefaultProfile()
+      UserProfileManager.saveProfile(defaultProfile)
+      setUserProfile(defaultProfile)
+    } else {
+      setUserProfile(profile)
+    }
+  }
 
   const caricaDati = async () => {
     try {
@@ -69,7 +89,10 @@ export default function Dashboard() {
       const response = await fetch("/api/orchestrator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ richiesta: nuovaRichiesta }),
+        body: JSON.stringify({ 
+          richiesta: nuovaRichiesta,
+          userProfile: userProfile 
+        }),
       })
 
       if (!response.ok) {
@@ -82,7 +105,7 @@ export default function Dashboard() {
       const result = await response.json()
       setSuggerimento(result)
       
-      // Salva nella cronologia
+      // Salva nella cronologia locale
       const nuovaVoce = {
         id: Date.now().toString(),
         richiesta: nuovaRichiesta,
@@ -91,6 +114,14 @@ export default function Dashboard() {
       }
       setCronologiaRichieste(prev => [nuovaVoce, ...prev])
       setRichiestaAttiva(nuovaVoce.id)
+      
+      // Salva nella cronologia del profilo utente
+      UserProfileManager.addToCronologia({
+        richiesta: nuovaRichiesta,
+        tipoTask: result.tipo_task,
+        aiUsato: result.spazio_ai_suggerito?.split(' - ')[0] || null,
+        suggerimentoSeguito: false
+      })
     } catch (error) {
       console.error("Errore analisi:", error)
       alert("Errore durante l'analisi della richiesta")
@@ -149,15 +180,44 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard AI Intelligente</h1>
-          <p className="text-gray-600">Il tuo orchestratore personale per gestire progetti, AI e automazioni</p>
+        <div className="text-center mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div></div>
+            <h1 className="text-4xl font-bold text-gray-900">
+              Dashboard AI Intelligente
+            </h1>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowPreferenze(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Preferenze AI"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowCronologia(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Cronologia Personalizzata"
+              >
+                <History className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg">
+                <User className="w-4 h-4" />
+                <span className="text-sm">
+                  {userProfile?.aiTools?.length || 0} AI configurati
+                </span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xl text-gray-600">
+            Il tuo maestro d&apos;orchestra per l&apos;automazione
+          </p>
         </div>
 
-        {/* Sezione principale: "Cosa vuoi fare oggi?" */}
+        {/* Sezione principale "Cosa vuoi fare oggi?" */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
           <div className="flex items-center gap-3 mb-6">
             <Brain className="w-8 h-8 text-blue-600" />
@@ -443,6 +503,39 @@ export default function Dashboard() {
           Dashboard AI Intelligente - Il tuo maestro d&apos;orchestra per l&apos;automazione
         </div>
       </div>
+
+      {/* Modal Preferenze AI */}
+      {showPreferenze && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <PreferenzeAI onClose={() => setShowPreferenze(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cronologia Personalizzata */}
+      {showCronologia && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Cronologia Personalizzata</h2>
+              <button
+                onClick={() => setShowCronologia(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <CronologiaPersonalizzata 
+              onRicaricaRichiesta={(richiesta) => {
+                setNuovaRichiesta(richiesta)
+                setShowCronologia(false)
+                setSuggerimento(null)
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

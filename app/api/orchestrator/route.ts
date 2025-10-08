@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { richiesta } = await request.json()
+    const { richiesta, userProfile } = await request.json()
 
     if (!richiesta || !richiesta.trim()) {
       return NextResponse.json(
@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Analisi semplificata senza dipendenze esterne
-    const suggerimento = analizzaRichiestaLocale(richiesta)
+    // Analisi personalizzata basata sul profilo utente
+    const suggerimento = analizzaRichiestaPersonalizzata(richiesta, userProfile)
 
     return NextResponse.json(suggerimento)
   } catch (error) {
@@ -24,14 +24,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function analizzaRichiestaLocale(richiesta: string) {
+function analizzaRichiestaPersonalizzata(richiesta: string, userProfile?: any) {
   const lower = richiesta.toLowerCase()
   
   // Determina il tipo di task
   let tipo_task = 'generico'
-  let spazio_ai_suggerito = 'ChatGPT-4 - Versatile per progetti generali'
+  let spazio_ai_suggerito = getPreferredAI(userProfile, 'generico') || 'ChatGPT-4 - Versatile per progetti generali'
   let computer_suggerito = 'Manager Operativo'
-  let motivazione = 'Approccio generale per progetti versatili'
+  let motivazione = getUserSpecificMotivation(userProfile, 'generico') || 'Approccio generale per progetti versatili'
   let passi_successivi = [
     'Definire obiettivi specifici',
     'Creare piano di lavoro',
@@ -41,8 +41,8 @@ function analizzaRichiestaLocale(richiesta: string) {
 
   if (lower.includes('marketing') || lower.includes('campagna') || lower.includes('pubblicità')) {
     tipo_task = 'marketing'
-    spazio_ai_suggerito = 'Claude (Anthropic) - Ottimo per strategie marketing'
-    motivazione = 'Un progetto di marketing richiede creatività e strategia. Claude eccelle nella creazione di contenuti persuasivi e piani marketing strutturati.'
+    spazio_ai_suggerito = getPreferredAI(userProfile, 'marketing') || 'Claude (Anthropic) - Ottimo per strategie marketing'
+    motivazione = getUserSpecificMotivation(userProfile, 'marketing') || 'Un progetto di marketing richiede creatività e strategia. Claude eccelle nella creazione di contenuti persuasivi e piani marketing strutturati.'
     passi_successivi = [
       'Analizzare target audience e mercato',
       'Definire key messaging e value proposition',
@@ -52,8 +52,9 @@ function analizzaRichiestaLocale(richiesta: string) {
     ]
   } else if (lower.includes('analisi') || lower.includes('dati') || lower.includes('report')) {
     tipo_task = 'analisi'
+    spazio_ai_suggerito = getPreferredAI(userProfile, 'analisi') || 'ChatGPT-4 - Eccellente per analisi dati'
     computer_suggerito = 'Analista Senior'
-    motivazione = 'L\'analisi dati richiede precisione e capacità di elaborazione. L\'Analista Senior ha gli strumenti per gestire dataset complessi.'
+    motivazione = getUserSpecificMotivation(userProfile, 'analisi') || 'L\'analisi dati richiede precisione e capacità di elaborazione. L\'Analista Senior ha gli strumenti per gestire dataset complessi.'
     passi_successivi = [
       'Definire domande di ricerca specifiche',
       'Identificare e raccogliere fonti dati',
@@ -63,8 +64,8 @@ function analizzaRichiestaLocale(richiesta: string) {
     ]
   } else if (lower.includes('sviluppo') || lower.includes('app') || lower.includes('sito') || lower.includes('codice')) {
     tipo_task = 'sviluppo'
-    spazio_ai_suggerito = 'GitHub Copilot - Specializzato in programmazione'
-    motivazione = 'I progetti di sviluppo beneficiano di assistenza specializzata nel coding. GitHub Copilot accelera la scrittura di codice di qualità.'
+    spazio_ai_suggerito = getPreferredAI(userProfile, 'sviluppo') || 'GitHub Copilot - Specializzato in programmazione'
+    motivazione = getUserSpecificMotivation(userProfile, 'sviluppo') || 'I progetti di sviluppo beneficiano di assistenza specializzata nel coding. GitHub Copilot accelera la scrittura di codice di qualità.'
     passi_successivi = [
       'Definire requisiti tecnici e funzionali',
       'Scegliere stack tecnologico appropriato',
@@ -74,8 +75,8 @@ function analizzaRichiestaLocale(richiesta: string) {
     ]
   } else if (lower.includes('contenuto') || lower.includes('articolo') || lower.includes('blog') || lower.includes('scrittura')) {
     tipo_task = 'creativo'
-    spazio_ai_suggerito = 'Claude (Anthropic) - Eccellente per contenuti creativi'
-    motivazione = 'La creazione di contenuti richiede creatività e padronanza linguistica. Claude produce testi di alta qualità e coinvolgenti.'
+    spazio_ai_suggerito = getPreferredAI(userProfile, 'creativo') || 'Claude (Anthropic) - Eccellente per contenuti creativi'
+    motivazione = getUserSpecificMotivation(userProfile, 'creativo') || 'La creazione di contenuti richiede creatività e padronanza linguistica. Claude produce testi di alta qualità e coinvolgenti.'
     passi_successivi = [
       'Definire tone of voice e stile',
       'Ricercare argomenti e fonti',
@@ -188,4 +189,106 @@ Questo è un progetto di tipo "${tipo_task}" che richiede un approccio struttura
 - Report di lessons learned
 - Raccomandazioni future`
   }
+}
+
+
+// Funzioni helper per personalizzazione
+function getPreferredAI(userProfile: any, tipoTask: string): string | null {
+  if (!userProfile || !userProfile.preferences || !userProfile.preferences.aiPreferito) {
+    return null
+  }
+  
+  const preferredAI = userProfile.preferences.aiPreferito[tipoTask]
+  if (!preferredAI) return null
+  
+  // Controlla se l'utente ha effettivamente questo AI configurato e attivo
+  const hasActiveAI = userProfile.aiTools?.some((tool: any) => 
+    tool.nome === preferredAI && tool.attivo
+  )
+  
+  if (hasActiveAI) {
+    return `${preferredAI} - Il tuo AI preferito per ${tipoTask}`
+  }
+  
+  return preferredAI
+}
+
+function getUserSpecificMotivation(userProfile: any, tipoTask: string): string | null {
+  if (!userProfile || !userProfile.cronologia) {
+    return null
+  }
+  
+  // Analizza la cronologia per progetti simili
+  const progettiSimili = userProfile.cronologia.filter((item: any) => 
+    item.tipoTask === tipoTask && item.suggerimentoSeguito && (item.valutazione || 0) >= 4
+  )
+  
+  if (progettiSimili.length > 0) {
+    const aiUsatiConSuccesso = progettiSimili
+      .map((item: any) => item.aiUsato)
+      .filter((ai: string) => ai)
+    
+    if (aiUsatiConSuccesso.length > 0) {
+      const aiPiuUsato = aiUsatiConSuccesso.reduce((acc: any, ai: string) => {
+        acc[ai] = (acc[ai] || 0) + 1
+        return acc
+      }, {})
+      
+      const aiMigliore = Object.entries(aiPiuUsato).sort(([,a], [,b]) => (b as number) - (a as number))[0][0]
+      
+      return `Basandomi sui tuoi progetti precedenti di ${tipoTask}, ${aiMigliore} ha dato ottimi risultati. Hai completato con successo ${progettiSimili.length} progetti simili.`
+    }
+  }
+  
+  return null
+}
+
+function getPersonalizedSteps(userProfile: any, tipoTask: string, defaultSteps: string[]): string[] {
+  if (!userProfile || !userProfile.cronologia) {
+    return defaultSteps
+  }
+  
+  // Analizza i progetti completati con successo per suggerire passi personalizzati
+  const progettiRiusciti = userProfile.cronologia.filter((item: any) => 
+    item.tipoTask === tipoTask && item.suggerimentoSeguito && (item.valutazione || 0) >= 4
+  )
+  
+  if (progettiRiusciti.length >= 2) {
+    // Aggiungi un passo personalizzato basato sull'esperienza
+    const personalizedSteps = [...defaultSteps]
+    personalizedSteps.unshift(`Rivedi i tuoi ${progettiRiusciti.length} progetti di ${tipoTask} completati con successo per identificare pattern vincenti`)
+    return personalizedSteps
+  }
+  
+  return defaultSteps
+}
+
+function addLearningInsights(userProfile: any, tipoTask: string): string {
+  if (!userProfile || !userProfile.cronologia) {
+    return ''
+  }
+  
+  const cronologiaTipo = userProfile.cronologia.filter((item: any) => item.tipoTask === tipoTask)
+  
+  if (cronologiaTipo.length === 0) {
+    return '\n\n💡 **Primo progetto di questo tipo**: Prendi nota dei risultati per migliorare i futuri suggerimenti!'
+  }
+  
+  const mediaValutazione = cronologiaTipo.reduce((sum: number, item: any) => sum + (item.valutazione || 0), 0) / cronologiaTipo.length
+  const tassoSuccesso = cronologiaTipo.filter((item: any) => item.suggerimentoSeguito).length / cronologiaTipo.length * 100
+  
+  let insights = `\n\n📊 **I tuoi dati per progetti ${tipoTask}**:\n`
+  insights += `- Progetti completati: ${cronologiaTipo.length}\n`
+  insights += `- Valutazione media: ${mediaValutazione.toFixed(1)}/5\n`
+  insights += `- Tasso di successo: ${tassoSuccesso.toFixed(0)}%\n`
+  
+  if (mediaValutazione >= 4) {
+    insights += `\n🎯 **Ottimo lavoro!** I tuoi progetti ${tipoTask} hanno performance eccellenti.`
+  } else if (mediaValutazione >= 3) {
+    insights += `\n💪 **Buon progresso!** Continua a sperimentare per migliorare ulteriormente.`
+  } else {
+    insights += `\n🔄 **Opportunità di crescita**: Prova a essere più specifico nelle richieste per ottenere suggerimenti migliori.`
+  }
+  
+  return insights
 }
