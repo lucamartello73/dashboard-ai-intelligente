@@ -207,7 +207,7 @@ const PreferenzeAI: React.FC<PreferenzeAIProps> = ({ onClose }) => {
       toast({
         title: "Attenzione",
         description: "Questo tipo di task esiste già.",
-        variant: "warning",
+        variant: "destructive",
       })
       return
     }
