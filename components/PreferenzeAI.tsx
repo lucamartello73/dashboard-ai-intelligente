@@ -127,10 +127,10 @@ const PreferenzeAI: React.FC<PreferenzeAIProps> = ({ onClose }) => {
 
   const handleUpdateAiPreference = async (taskType: string, aiName: string) => {
     if (!preferences) return
-    const updatedAiPreferito = { ...preferences.aiPreferito, [taskType]: aiName }
+    const updatedAiPreferito = { ...preferences.ai_preferito, [taskType]: aiName }
     try {
-      await SupabaseUserProfileManager.updateUserPreferences({ aiPreferito: updatedAiPreferito })
-      setPreferences(prev => prev ? { ...prev, aiPreferito: updatedAiPreferito } : null)
+      await SupabaseUserProfileManager.updateUserPreferences({ ai_preferito: updatedAiPreferito })
+      setPreferences(prev => prev ? { ...prev, ai_preferito: updatedAiPreferito } : null)
       toast({
         title: "Successo",
         description: `Preferenza AI per ${taskType} aggiornata.`, 
@@ -203,7 +203,7 @@ const PreferenzeAI: React.FC<PreferenzeAIProps> = ({ onClose }) => {
   const handleAddCustomTaskType = async () => {
     if (!newCustomTaskType.trim() || !preferences) return
     const formattedType = newCustomTaskType.trim().toLowerCase().replace(/\s+/g, "-")
-    if (preferences.aiPreferito[formattedType]) {
+    if (preferences.ai_preferito[formattedType]) {
       toast({
         title: "Attenzione",
         description: "Questo tipo di task esiste già.",
@@ -211,10 +211,10 @@ const PreferenzeAI: React.FC<PreferenzeAIProps> = ({ onClose }) => {
       })
       return
     }
-    const updatedAiPreferito = { ...preferences.aiPreferito, [formattedType]: "ChatGPT-4" } // Default to ChatGPT-4
+    const updatedAiPreferito = { ...preferences.ai_preferito, [formattedType]: "ChatGPT-4" } // Default to ChatGPT-4
     try {
-      await SupabaseUserProfileManager.updateUserPreferences({ aiPreferito: updatedAiPreferito })
-      setPreferences(prev => prev ? { ...prev, aiPreferito: updatedAiPreferito } : null)
+      await SupabaseUserProfileManager.updateUserPreferences({ ai_preferito: updatedAiPreferito })
+      setPreferences(prev => prev ? { ...prev, ai_preferito: updatedAiPreferito } : null)
       setNewCustomTaskType("")
       toast({
         title: "Successo",
@@ -231,11 +231,11 @@ const PreferenzeAI: React.FC<PreferenzeAIProps> = ({ onClose }) => {
 
   const handleRemoveCustomTaskType = async (taskType: string) => {
     if (!preferences || taskType === "generico") return // Prevent removing 'generico'
-    const updatedAiPreferito = { ...preferences.aiPreferito }
+    const updatedAiPreferito = { ...preferences.ai_preferito }
     delete updatedAiPreferito[taskType]
     try {
-      await SupabaseUserProfileManager.updateUserPreferences({ aiPreferito: updatedAiPreferito })
-      setPreferences(prev => prev ? { ...prev, aiPreferito: updatedAiPreferito } : null)
+      await SupabaseUserProfileManager.updateUserPreferences({ ai_preferito: updatedAiPreferito })
+      setPreferences(prev => prev ? { ...prev, ai_preferito: updatedAiPreferito } : null)
       toast({
         title: "Successo",
         description: `Tipo di task '${taskType}' rimosso.`, 
@@ -352,7 +352,7 @@ const PreferenzeAI: React.FC<PreferenzeAIProps> = ({ onClose }) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {Object.entries(preferences.aiPreferito).map(([taskType, aiName]) => (
+            {Object.entries(preferences.ai_preferito).map(([taskType, aiName]) => (
               <div key={taskType} className="flex items-center justify-between">
                 <Label className="capitalize">{taskType.replace(/-/g, " ")}</Label>
                 <div className="flex items-center space-x-2">
